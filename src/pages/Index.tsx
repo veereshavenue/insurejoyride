@@ -15,12 +15,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/components/ui/use-toast";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
-  const [userId, setUserId] = useState<string>(""); // Will be set when user authenticates
+  const [userId, setUserId] = useState<string>("");
   
   // Define the steps for our multi-step form
   const steps = [

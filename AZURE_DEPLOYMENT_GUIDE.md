@@ -23,6 +23,41 @@ This document provides comprehensive instructions for deploying the entire Trave
 1. Create a new Supabase project
 2. Execute the migration scripts in `src/db/migration.sql`
 3. Note your Supabase URL and anon key
+4. Create and configure the storage bucket for travel documents:
+   ```sql
+   INSERT INTO storage.buckets (id, name, public)
+   VALUES ('travel_documents', 'travel_documents', true);
+   
+   -- Set up RLS policies for the travel_documents bucket
+   -- Allow authenticated users to upload their own travel documents
+   CREATE POLICY "Users can upload their own travel documents"
+   ON storage.objects
+   FOR INSERT TO authenticated
+   WITH CHECK (
+     bucket_id = 'travel_documents' AND
+     (storage.foldername(name))[1] IN (
+       SELECT id::text FROM public.travel_policies WHERE user_id = auth.uid()
+     )
+   );
+   
+   -- Allow authenticated users to view their own travel documents
+   CREATE POLICY "Users can view their own travel documents"
+   ON storage.objects
+   FOR SELECT TO authenticated
+   USING (
+     bucket_id = 'travel_documents' AND
+     (storage.foldername(name))[1] IN (
+       SELECT id::text FROM public.travel_policies WHERE user_id = auth.uid()
+     )
+   );
+   ```
+
+5. Deploy the Edge Functions:
+   ```bash
+   supabase functions deploy get-insurance-quotes
+   supabase functions deploy process-payment
+   supabase functions deploy purchase-plan
+   ```
 
 ## Step 2: Set Up Azure MySQL Database
 
@@ -72,6 +107,8 @@ mvn azure-functions:deploy
      - `MYSQL_CONNECTION_STRING`: jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true
      - `MYSQL_USER`: adminuser@travel-insurance-mysql
      - `MYSQL_PASSWORD`: <your-password>
+     - `SUPABASE_URL`: Your Supabase URL
+     - `SUPABASE_ANON_KEY`: Your Supabase anon key
 
 ## Step 4: Deploy Front-end to Azure Static Web Apps
 
@@ -188,6 +225,20 @@ jobs:
 
 2. Add the necessary secret to your GitHub repository:
    - `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`: From Azure Function App > Get publish profile
+
+## Step 7: Java Backend Functions Implementation
+
+The Java backend implementation provides the following endpoints:
+
+1. **GET /api/quotes**: Get insurance quotes based on travel details
+2. **GET /api/plans/{id}**: Get plan details by ID
+3. **POST /api/payment**: Process payment for a plan
+4. **POST /api/purchase**: Purchase a plan
+5. **POST /api/documents/upload**: Upload travel documents
+6. **GET /api/user/profile**: Get user profile
+7. **POST /api/user/profile**: Update user profile
+
+Each function is implemented in a separate Java class in the `src/azure-functions/travelInsuranceApi/src/main/java/com/travelinsurance/` directory.
 
 ## Testing and Monitoring
 
