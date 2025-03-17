@@ -1,69 +1,148 @@
-# Welcome to your Lovable project
 
-## Project info
+# Travel Insurance Application
 
-**URL**: https://lovable.dev/projects/e0734d84-188f-42cc-a49c-032c54851ea0
+A comprehensive travel insurance application built with React, TypeScript, Supabase, and Azure Functions.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- Browse insurance plans
+- Get personalized quotes
+- Purchase insurance policies
+- Manage user profiles
+- Upload travel documents
+- Process payments
+- View policy details
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e0734d84-188f-42cc-a49c-032c54851ea0) and start prompting.
+### Frontend
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui components
+- React Query
+- React Router
+- Supabase Client
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend
+- Supabase (PostgreSQL, Auth, Storage)
+- Azure Functions (Java)
+- Azure MySQL Database
 
-**Use your preferred IDE**
+## Local Development
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
+- Node.js (v16+)
+- npm or yarn
+- Java 11
+- Maven
+- Supabase CLI
+- Azure Functions Core Tools
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Environment Setup
 
-Follow these steps:
+1. Clone the repository
+2. Create a `.env.local` file in the project root with the following variables:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_API_URL=http://localhost:7071/api
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Frontend Setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Install dependencies
+   ```bash
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. Start the development server
+   ```bash
+   npm run dev
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+3. Access the application at `http://localhost:5173`
+
+### Supabase Setup
+
+1. Start a local Supabase instance
+   ```bash
+   supabase start
+   ```
+
+2. Apply the database migration
+   ```bash
+   supabase db reset
+   ```
+
+### Azure Functions Setup
+
+1. Navigate to the Azure Functions directory
+   ```bash
+   cd src/azure-functions/travelInsuranceApi
+   ```
+
+2. Build the project
+   ```bash
+   mvn clean package
+   ```
+
+3. Start the Functions runtime locally
+   ```bash
+   mvn azure-functions:run
+   ```
+
+4. Set up local environment variables for the Functions
+   ```
+   MYSQL_CONNECTION_STRING=jdbc:mysql://localhost:3306/insurancedb
+   MYSQL_USER=root
+   MYSQL_PASSWORD=your_password
+   ```
+
+## Testing
+
+### End-to-End Testing
+```bash
+npm run test:e2e
 ```
 
-**Edit a file directly in GitHub**
+### Unit Testing
+```bash
+npm run test
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Deployment
 
-**Use GitHub Codespaces**
+See [AZURE_DEPLOYMENT_GUIDE.md](./AZURE_DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project Structure
 
-## What technologies are used for this project?
+```
+├── public/                  # Static assets
+├── src/
+│   ├── azure-functions/     # Java Azure Functions
+│   ├── components/
+│   │   ├── forms/           # Form components
+│   │   ├── layout/          # Layout components
+│   │   └── ui/              # UI components
+│   ├── db/                  # Database migrations
+│   ├── hooks/               # Custom React hooks
+│   ├── lib/                 # Utility libraries
+│   ├── pages/               # Page components
+│   ├── services/            # API services
+│   ├── types/               # TypeScript types
+│   └── utils/               # Utility functions
+├── .env.local               # Local environment variables
+└── AZURE_DEPLOYMENT_GUIDE.md # Deployment guide
+```
 
-This project is built with .
+## Contributing
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-## How can I deploy this project?
+## License
 
-Simply open [Lovable](https://lovable.dev/projects/e0734d84-188f-42cc-a49c-032c54851ea0) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+MIT

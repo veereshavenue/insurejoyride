@@ -39,6 +39,13 @@
             <version>20220320</version>
         </dependency>
         
+        <!-- Azure Storage Blob -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>12.18.0</version>
+        </dependency>
+        
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
