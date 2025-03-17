@@ -72,7 +72,10 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       };
     }
     
-    updatedTravelers[travelerIndex].beneficiary![field as keyof typeof updatedTravelers[travelerIndex].beneficiary] = value;
+    // Fix the TypeScript error by using type assertion for the field
+    if (field === "name" || field === "relationship" || field === "contactDetails") {
+      updatedTravelers[travelerIndex].beneficiary![field] = value;
+    }
     
     setCurrentTravelDetails({
       ...currentTravelDetails,
@@ -92,7 +95,10 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
       };
     }
     
-    updatedTravelers[travelerIndex].passport![field as keyof typeof updatedTravelers[travelerIndex].passport] = value;
+    // Fix the TypeScript error by using type assertion for the field
+    if (field === "number" || field === "issueDate" || field === "expiryDate" || field === "nationality") {
+      updatedTravelers[travelerIndex].passport![field] = value;
+    }
     
     setCurrentTravelDetails({
       ...currentTravelDetails,
@@ -321,3 +327,4 @@ const AdditionalInfoForm: React.FC<AdditionalInfoFormProps> = ({
 };
 
 export default AdditionalInfoForm;
+
