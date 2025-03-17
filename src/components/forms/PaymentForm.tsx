@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +10,7 @@ interface PaymentFormProps {
   selectedPlan: InsurancePlan;
   onSubmit: () => void;
   onBack: () => void;
+  userId?: string;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -18,6 +18,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   selectedPlan,
   onSubmit,
   onBack,
+  userId,
 }) => {
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
@@ -35,18 +36,16 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   };
   
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Format card number with spaces after every 4 digits
     const value = e.target.value.replace(/\s/g, "");
     const formattedValue = value
       .replace(/\D/g, "")
       .replace(/(\d{4})(?=\d)/g, "$1 ")
-      .slice(0, 19); // Limit to 16 digits + 3 spaces
+      .slice(0, 19);
     
     setCardNumber(formattedValue);
   };
   
   const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Format expiry date as MM/YY
     const value = e.target.value.replace(/\D/g, "");
     
     if (value.length <= 2) {
@@ -57,7 +56,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   };
   
   const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Limit CVV to 3 or 4 digits
     const value = e.target.value.replace(/\D/g, "").slice(0, 4);
     setCvv(value);
   };
@@ -65,7 +63,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
     if (paymentMethod === "credit-card") {
       if (!cardNumber || !cardName || !expiryDate || !cvv || !billingAddress) {
         toast({
@@ -95,10 +92,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
     }
     
-    // Process payment
     setIsProcessing(true);
     
-    // Simulate payment processing
+    console.log("Processing payment for user:", userId);
+    
     setTimeout(() => {
       setIsProcessing(false);
       onSubmit();
