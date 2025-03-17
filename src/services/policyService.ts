@@ -1,12 +1,15 @@
 
 import { 
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser,
   getInsurancePlans,
   getInsurancePlan,
   createTravelPolicy,
-  getUserPolicies,
+  getUserPolicies as fetchUserPolicies,
   createTravelerInfo,
-  createPaymentTransaction,
-  getCurrentUser
+  createPaymentTransaction
 } from '@/lib/supabase';
 import type { Database } from '@/types/supabase';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,7 +33,7 @@ export type PaymentTransactionInsert = Database['public']['Tables']['payment_tra
 export const getAvailableInsurancePlans = async (): Promise<InsurancePlan[]> => {
   try {
     const plans = await getInsurancePlans();
-    return plans as InsurancePlan[];
+    return plans as unknown as InsurancePlan[];
   } catch (error) {
     console.error('Error fetching insurance plans:', error);
     throw error;
@@ -43,7 +46,7 @@ export const getAvailableInsurancePlans = async (): Promise<InsurancePlan[]> => 
 export const getPlanDetails = async (planId: string): Promise<InsurancePlan> => {
   try {
     const plan = await getInsurancePlan(planId);
-    return plan as InsurancePlan;
+    return plan as unknown as InsurancePlan;
   } catch (error) {
     console.error(`Error fetching plan details for ${planId}:`, error);
     throw error;
@@ -66,8 +69,8 @@ export const purchaseInsurancePolicy = async (
   paymentMethod: string
 ): Promise<TravelPolicy> => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const { data, error } = await getCurrentUser();
+    if (error || !data.user) {
       throw new Error('No authenticated user found');
     }
     
@@ -76,7 +79,7 @@ export const purchaseInsurancePolicy = async (
     
     // Create the policy
     const policyData: TravelPolicyInsert = {
-      user_id: user.id,
+      user_id: data.user.id,
       plan_id: planId,
       reference_number: referenceNumber,
       coverage_type: coverageType,
@@ -98,7 +101,7 @@ export const purchaseInsurancePolicy = async (
     // Create payment transaction record
     const transactionData: PaymentTransactionInsert = {
       policy_id: newPolicy.id,
-      user_id: user.id,
+      user_id: data.user.id,
       amount: totalPrice,
       currency: 'USD',
       payment_method: paymentMethod,
@@ -167,12 +170,12 @@ export const addTravelerInfo = async (
  */
 export const getUserInsurancePolicies = async () => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const { data, error } = await getCurrentUser();
+    if (error || !data.user) {
       throw new Error('No authenticated user found');
     }
     
-    const policies = await getUserPolicies(user.id);
+    const policies = await fetchUserPolicies(data.user.id);
     return policies;
   } catch (error) {
     console.error('Error fetching user policies:', error);

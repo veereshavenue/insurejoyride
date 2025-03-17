@@ -1,8 +1,8 @@
 
 import { 
-  signUp,
-  signIn,
-  signOut,
+  signUp as supabaseSignUp,
+  signIn as supabaseSignIn,
+  signOut as supabaseSignOut,
   getCurrentUser,
   createUserProfile,
   getUserProfile,
@@ -27,15 +27,15 @@ export const registerUser = async (
 ) => {
   try {
     // Sign up the user with Supabase Auth
-    const { user } = await signUp(email, password);
+    const { data, error } = await supabaseSignUp(email, password);
     
-    if (!user?.id) {
-      throw new Error('User registration failed');
+    if (error || !data.user?.id) {
+      throw error || new Error('User registration failed');
     }
 
     // Create the user's profile
     const userProfileData: UserProfileInsert = {
-      user_id: user.id,
+      user_id: data.user.id,
       email,
       first_name: firstName,
       last_name: lastName,
@@ -45,7 +45,7 @@ export const registerUser = async (
 
     await createUserProfile(userProfileData);
     
-    return { success: true, userId: user.id };
+    return { success: true, userId: data.user.id };
   } catch (error) {
     console.error('Registration error:', error);
     throw error;
@@ -57,8 +57,9 @@ export const registerUser = async (
  */
 export const loginUser = async (email: string, password: string) => {
   try {
-    const { user, session } = await signIn(email, password);
-    return { user, session };
+    const { data, error } = await supabaseSignIn(email, password);
+    if (error) throw error;
+    return { user: data.user, session: data.session };
   } catch (error) {
     console.error('Login error:', error);
     throw error;
@@ -70,7 +71,7 @@ export const loginUser = async (email: string, password: string) => {
  */
 export const logoutUser = async () => {
   try {
-    await signOut();
+    await supabaseSignOut();
     return { success: true };
   } catch (error) {
     console.error('Logout error:', error);
@@ -83,12 +84,12 @@ export const logoutUser = async () => {
  */
 export const getProfile = async () => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const { data, error } = await getCurrentUser();
+    if (error || !data.user) {
       return null;
     }
     
-    const profile = await getUserProfile(user.id);
+    const profile = await getUserProfile(data.user.id);
     return profile;
   } catch (error) {
     console.error('Get profile error:', error);
@@ -101,12 +102,12 @@ export const getProfile = async () => {
  */
 export const updateProfile = async (updates: UserProfileUpdate) => {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const { data, error } = await getCurrentUser();
+    if (error || !data.user) {
       throw new Error('No authenticated user found');
     }
     
-    const updatedProfile = await updateUserProfile(user.id, updates);
+    const updatedProfile = await updateUserProfile(data.user.id, updates);
     return updatedProfile;
   } catch (error) {
     console.error('Update profile error:', error);

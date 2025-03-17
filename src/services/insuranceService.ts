@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { 
   TravelDetails, 
@@ -10,7 +9,7 @@ import {
 } from '@/types';
 
 // Supabase API endpoint URLs
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rbsmlwqhmmjwlwyeefmn.supabase.co';
 
 /**
  * Get insurance quotes based on travel details
@@ -216,15 +215,15 @@ export const updateUserProfile = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Check if profile exists
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError || !data.user) {
       return { success: false, error: 'User not authenticated' };
     }
     
     const { data: existingProfile, error: fetchError } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', data.user.id)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
@@ -241,7 +240,7 @@ export const updateUserProfile = async (
           address: profileData.address,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', user.id);
+        .eq('user_id', data.user.id);
 
       if (updateError) throw updateError;
     } else {
@@ -249,7 +248,7 @@ export const updateUserProfile = async (
       const { error: insertError } = await supabase
         .from('user_profiles')
         .insert({
-          user_id: user.id,
+          user_id: data.user.id,
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           email: profileData.email,
@@ -275,24 +274,24 @@ export const updateUserProfile = async (
  */
 export const getUserPolicies = async (): Promise<any[]> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
       throw new Error('User not authenticated');
     }
     
-    const { data, error } = await supabase
+    const { data: policies, error: policiesError } = await supabase
       .from('travel_policies')
       .select(`
         *,
         insurance_plans(name, provider),
         traveler_info(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', data.user.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (policiesError) throw policiesError;
     
-    return data || [];
+    return policies || [];
   } catch (error) {
     console.error('Error fetching user policies:', error);
     return [];
