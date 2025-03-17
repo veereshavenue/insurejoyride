@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { callAzureFunction } from '@/integrations/azure/client';
 
 /**
  * Update user profile information
@@ -14,52 +14,13 @@ export const updateUserProfile = async (
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // Check if profile exists
-    const { data, error: userError } = await supabase.auth.getUser();
-    if (userError || !data.user) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    const data = await callAzureFunction<{ success: boolean; error?: string }>(
+      'user/profile',
+      'POST',
+      profileData
+    );
     
-    const { data: existingProfile, error: fetchError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-    
-    if (existingProfile) {
-      // Update existing profile
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({
-          first_name: profileData.firstName,
-          last_name: profileData.lastName,
-          email: profileData.email,
-          phone: profileData.phone,
-          address: profileData.address,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', data.user.id);
-
-      if (updateError) throw updateError;
-    } else {
-      // Create new profile
-      const { error: insertError } = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id: data.user.id,
-          first_name: profileData.firstName,
-          last_name: profileData.lastName,
-          email: profileData.email,
-          phone: profileData.phone,
-          address: profileData.address,
-        });
-
-      if (insertError) throw insertError;
-    }
-    
-    return { success: true };
+    return data || { success: false, error: 'No response from user profile service' };
   } catch (error) {
     console.error('Error updating user profile:', error);
     return { 
@@ -74,23 +35,7 @@ export const updateUserProfile = async (
  */
 export const getUserPolicies = async (): Promise<any[]> => {
   try {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) {
-      throw new Error('User not authenticated');
-    }
-    
-    const { data: policies, error: policiesError } = await supabase
-      .from('travel_policies')
-      .select(`
-        *,
-        insurance_plans(name, provider),
-        traveler_info(*)
-      `)
-      .eq('user_id', data.user.id)
-      .order('created_at', { ascending: false });
-
-    if (policiesError) throw policiesError;
-    
+    const policies = await callAzureFunction<any[]>('user/policies');
     return policies || [];
   } catch (error) {
     console.error('Error fetching user policies:', error);

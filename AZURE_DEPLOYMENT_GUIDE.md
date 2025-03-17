@@ -10,14 +10,13 @@ This document provides comprehensive instructions for deploying the entire Trave
 - GitHub account for source code repository
 - Node.js and npm installed for front-end development
 - Maven installed for Java backend development
-- Supabase account (for authentication only)
 
 ## Infrastructure Components
 
 1. **Front-end**: Azure Static Web Apps
 2. **Back-end APIs**: Azure Functions (Java)
 3. **Database**: Azure MySQL
-4. **Authentication**: Supabase Auth (authentication only)
+4. **Authentication**: Azure AD B2C
 
 ## Step 1: Set Up Azure MySQL Database
 
@@ -41,14 +40,35 @@ mysql -h travel-insurance-mysql.mysql.database.azure.com -u adminuser@travel-ins
 
 4. Execute the schema creation script from `src/db/mysql_migration.sql`
 
-## Step 2: Set Up Supabase (For Authentication Only)
+## Step 2: Set Up Azure AD B2C for Authentication
 
-1. Create a new Supabase project
-2. Configure authentication settings:
-   - Go to Authentication > Settings
-   - Enable Email/Password login
-   - Customize email templates if needed
-3. Note your Supabase URL and anon key for front-end authentication
+1. Create an Azure AD B2C tenant:
+   - Go to Azure Portal > Azure AD B2C
+   - Create a new tenant or use an existing one
+
+2. Register your application:
+   - Navigate to App registrations
+   - Click "New registration"
+   - Enter a name for your application
+   - For Redirect URI, enter your frontend URL (e.g., https://your-static-web-app.azurestaticapps.net)
+   - Click "Register"
+
+3. Configure user flows:
+   - Navigate to User flows
+   - Create sign-up and sign-in flow
+   - Create password reset flow
+   - Customize the user attributes as needed
+
+4. Configure identity providers:
+   - Go to Identity providers
+   - Enable Email/Password authentication
+   - To enable Google auth, select "Google" and enter your Google OAuth credentials
+
+5. Note your B2C tenant details:
+   - Tenant name
+   - Application (client) ID
+   - User flow names
+   - These will be used in your application configuration
 
 ## Step 3: Deploy Azure Functions (Java Backend)
 
@@ -76,10 +96,19 @@ mvn azure-functions:deploy
      - `MYSQL_CONNECTION_STRING`: jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true
      - `MYSQL_USER`: adminuser@travel-insurance-mysql
      - `MYSQL_PASSWORD`: <your-password>
-     - `SUPABASE_URL`: Your Supabase URL (for authentication verification)
-     - `SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication verification)
+     - `AZURE_AD_B2C_TENANT`: Your Azure AD B2C tenant name
+     - `AZURE_AD_B2C_CLIENT_ID`: Your application client ID
+     - `AZURE_AD_B2C_CLIENT_SECRET`: Your application client secret
 
-## Step 4: Deploy Front-end to Azure Static Web Apps
+## Step 4: Configure CORS for Azure Functions
+
+1. Add CORS configuration to allow requests from your frontend:
+   - Go to your Function App > CORS
+   - Add your frontend URL (e.g., https://your-static-web-app.azurestaticapps.net)
+   - Check "Enable Access-Control-Allow-Credentials"
+   - Click "Save"
+
+## Step 5: Deploy Front-end to Azure Static Web Apps
 
 1. Create a GitHub repository and push your code
 
@@ -92,11 +121,14 @@ az staticwebapp create --name travel-insurance-app --resource-group travel-insur
 3. Configure environment variables in Azure Portal:
    - Go to your Static Web App > Configuration
    - Add these application settings:
-     - `VITE_SUPABASE_URL`: Your Supabase URL (for authentication)
-     - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication)
-     - `VITE_API_URL`: URL of your Azure Functions
+     - `VITE_AZURE_AD_CLIENT_ID`: Your Azure AD B2C application client ID
+     - `VITE_AZURE_AD_AUTHORITY`: Your Azure AD B2C authority URL
+     - `VITE_AZURE_AD_REDIRECT_URI`: Your frontend URL
+     - `VITE_AZURE_AD_KNOWN_AUTHORITY`: Your Azure AD B2C tenant name
+     - `VITE_AZURE_AD_SCOPE`: API scope for your application
+     - `VITE_AZURE_FUNCTION_URL`: URL of your Azure Functions
 
-## Step 5: Configure GitHub Actions for CI/CD
+## Step 6: Configure GitHub Actions for CI/CD
 
 1. Create a GitHub workflow file at `.github/workflows/azure-static-web-apps.yml`:
 
@@ -130,9 +162,12 @@ jobs:
           output_location: "dist"
           app_build_command: "npm run build"
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_AZURE_AD_CLIENT_ID: ${{ secrets.VITE_AZURE_AD_CLIENT_ID }}
+          VITE_AZURE_AD_AUTHORITY: ${{ secrets.VITE_AZURE_AD_AUTHORITY }}
+          VITE_AZURE_AD_REDIRECT_URI: ${{ secrets.VITE_AZURE_AD_REDIRECT_URI }}
+          VITE_AZURE_AD_KNOWN_AUTHORITY: ${{ secrets.VITE_AZURE_AD_KNOWN_AUTHORITY }}
+          VITE_AZURE_AD_SCOPE: ${{ secrets.VITE_AZURE_AD_SCOPE }}
+          VITE_AZURE_FUNCTION_URL: ${{ secrets.VITE_AZURE_FUNCTION_URL }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -149,11 +184,14 @@ jobs:
 
 2. Add the necessary secrets to your GitHub repository:
    - `AZURE_STATIC_WEB_APPS_API_TOKEN`: From Azure Static Web App deployment
-   - `VITE_SUPABASE_URL`: Your Supabase URL (for authentication)
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication)
-   - `VITE_API_URL`: URL of your Azure Functions
+   - `VITE_AZURE_AD_CLIENT_ID`: Your Azure AD B2C application client ID
+   - `VITE_AZURE_AD_AUTHORITY`: Your Azure AD B2C authority URL
+   - `VITE_AZURE_AD_REDIRECT_URI`: Your frontend URL
+   - `VITE_AZURE_AD_KNOWN_AUTHORITY`: Your Azure AD B2C tenant name
+   - `VITE_AZURE_AD_SCOPE`: API scope for your application
+   - `VITE_AZURE_FUNCTION_URL`: URL of your Azure Functions
 
-## Step 6: CI/CD for Azure Functions
+## Step 7: CI/CD for Azure Functions
 
 1. Create a GitHub workflow file at `.github/workflows/azure-functions.yml`:
 
@@ -195,13 +233,13 @@ jobs:
 2. Add the necessary secret to your GitHub repository:
    - `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`: From Azure Function App > Get publish profile
 
-## Step 7: Java Backend Functions Implementation
+## Step 8: Update Java Backend Functions Implementation
 
 The Java backend implementation provides the following endpoints:
 
 1. **GET /api/quotes**: Get insurance quotes based on travel details
 2. **GET /api/plans/{id}**: Get plan details by ID
-3. **POST /api/payment**: Process payment for a plan
+3. **POST /api/payment/process**: Process payment for a plan
 4. **POST /api/purchase**: Purchase a plan
 5. **POST /api/documents/upload**: Upload travel documents
 6. **GET /api/user/profile**: Get user profile
@@ -209,11 +247,48 @@ The Java backend implementation provides the following endpoints:
 
 Each function is implemented in a separate Java class in the `src/azure-functions/travelInsuranceApi/src/main/java/com/travelinsurance/` directory.
 
+## Step 9: Configure Azure AD B2C Token Validation in Azure Functions
+
+In your Java code, add a token validation filter to ensure the Azure AD B2C tokens are validated:
+
+```java
+// Example token validation in a function
+@FunctionName("secureFunction")
+public HttpResponseMessage run(
+        @HttpTrigger(name = "req", 
+                    methods = {HttpMethod.GET}, 
+                    authLevel = AuthorizationLevel.ANONYMOUS) 
+                    HttpRequestMessage<Optional<String>> request,
+        final ExecutionContext context) {
+    
+    // Get the Authorization header
+    String authHeader = request.getHeaders().get("Authorization");
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        return request.createResponseBuilder(HttpStatus.UNAUTHORIZED)
+                .body("Authorization header is required")
+                .build();
+    }
+    
+    String token = authHeader.substring("Bearer ".length());
+    
+    // Validate the token using MSAL or JWT library
+    if (!validateToken(token)) {
+        return request.createResponseBuilder(HttpStatus.UNAUTHORIZED)
+                .body("Invalid token")
+                .build();
+    }
+    
+    // Process the request
+    // ...
+}
+```
+
 ## Testing and Monitoring
 
 1. **Test the Deployment**:
    - Visit your Static Web App URL
    - Test the API endpoints
+   - Test the authentication flow
    - Verify database connections
 
 2. **Set Up Monitoring**:
@@ -223,35 +298,24 @@ Each function is implemented in a separate Java class in the `src/azure-function
 3. **Logs and Diagnostics**:
    - Functions logs: Azure Portal > Your Function App > Functions > Monitor
    - Static Web App logs: Azure Portal > Your Static Web App > Monitoring > Logs
+   - AD B2C logs: Azure Portal > Azure AD B2C > Audit logs
 
 ## Troubleshooting
 
-1. **CORS Issues**:
-   - Add your frontend URL to the CORS settings of your Function App
+1. **Authentication Issues**:
+   - Verify Azure AD B2C configuration
+   - Check redirect URIs
+   - Review authentication logs in Azure AD B2C
 
-2. **Database Connection Issues**:
+2. **API Connection Issues**:
+   - Verify CORS settings
+   - Check network requests in browser dev tools
+   - Ensure environment variables are set correctly
+
+3. **Database Connection Issues**:
    - Verify firewall rules
    - Check connection strings
    - Test connectivity from Functions to MySQL
-
-3. **Authentication Issues**:
-   - Verify Supabase settings
-   - Check JWT tokens in requests
-
-## Production Considerations
-
-1. **Scaling**:
-   - Configure auto-scaling for Functions
-   - Monitor performance and adjust resources as needed
-
-2. **Backup**:
-   - Set up regular backups for MySQL database
-   - Consider geo-redundancy for critical data
-
-3. **Security**:
-   - Enable HTTPS
-   - Use managed identities for Azure resources
-   - Implement proper authentication and authorization
 
 ## Cost Optimization
 

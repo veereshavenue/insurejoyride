@@ -1,16 +1,12 @@
 
 import { getInsuranceQuotes } from '../quoteService';
-import { supabase } from '@/integrations/supabase/client';
+import { callAzureFunction } from '@/integrations/azure/client';
 import { TravelDetails } from '@/types';
 import '@types/jest';
 
-// Mock Supabase functions invocation
-jest.mock('@/integrations/supabase/client', () => ({
-  supabase: {
-    functions: {
-      invoke: jest.fn()
-    }
-  }
+// Mock Azure Function call
+jest.mock('@/integrations/azure/client', () => ({
+  callAzureFunction: jest.fn()
 }));
 
 describe('getInsuranceQuotes', () => {
@@ -36,40 +32,36 @@ describe('getInsuranceQuotes', () => {
     jest.clearAllMocks();
   });
 
-  it('should call the edge function with the correct parameters', async () => {
+  it('should call the Azure function with the correct parameters', async () => {
     // Setup mock response
-    (supabase.functions.invoke as jest.Mock).mockResolvedValue({
-      data: [
-        {
-          id: 'plan-1',
-          name: 'Basic Plan',
-          provider: 'Insurance Co',
-          price: 100,
-          benefits: [],
-          coverageLimit: '$10,000',
-          rating: 4.5,
-          terms: 'Terms and conditions',
-          exclusions: [],
-          pros: [],
-          cons: [],
-        }
-      ],
-      error: null
-    });
+    (callAzureFunction as jest.Mock).mockResolvedValue([
+      {
+        id: 'plan-1',
+        name: 'Basic Plan',
+        provider: 'Insurance Co',
+        price: 100,
+        benefits: [],
+        coverageLimit: '$10,000',
+        rating: 4.5,
+        terms: 'Terms and conditions',
+        exclusions: [],
+        pros: [],
+        cons: [],
+      }
+    ]);
 
     // Call the function
     await getInsuranceQuotes(mockTravelDetails);
 
-    // Verify edge function was called with correct parameters
-    expect(supabase.functions.invoke).toHaveBeenCalledWith(
-      'get-insurance-quotes',
-      {
-        body: { travelDetails: mockTravelDetails }
-      }
+    // Verify Azure function was called with correct parameters
+    expect(callAzureFunction).toHaveBeenCalledWith(
+      'quotes',
+      'POST',
+      { travelDetails: mockTravelDetails }
     );
   });
 
-  it('should return the quotes when the edge function succeeds', async () => {
+  it('should return the quotes when the Azure function succeeds', async () => {
     // Setup mock response
     const mockQuotes = [
       {
@@ -87,10 +79,7 @@ describe('getInsuranceQuotes', () => {
       }
     ];
     
-    (supabase.functions.invoke as jest.Mock).mockResolvedValue({
-      data: mockQuotes,
-      error: null
-    });
+    (callAzureFunction as jest.Mock).mockResolvedValue(mockQuotes);
 
     // Call the function
     const result = await getInsuranceQuotes(mockTravelDetails);
@@ -99,12 +88,10 @@ describe('getInsuranceQuotes', () => {
     expect(result).toEqual(mockQuotes);
   });
 
-  it('should throw an error when the edge function fails', async () => {
-    // Setup mock error response
-    (supabase.functions.invoke as jest.Mock).mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to fetch quotes' }
-    });
+  it('should throw an error when the Azure function fails', async () => {
+    // Setup mock error
+    const error = new Error('Failed to fetch quotes');
+    (callAzureFunction as jest.Mock).mockRejectedValue(error);
 
     // Call the function and expect it to throw
     await expect(getInsuranceQuotes(mockTravelDetails)).rejects.toThrow('Failed to fetch quotes');
