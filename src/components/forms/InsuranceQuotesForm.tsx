@@ -7,7 +7,7 @@ import PlanDetails from "@/components/ui/PlanDetails";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { ShieldCheck, Filter, Check, AlertCircle, RefreshCw } from "lucide-react";
-import { getInsuranceQuotes, getPlanDetails } from "@/services/insuranceService";
+import { getInsuranceQuotes, getPlanDetails } from "@/services/insurance";
 import { useQuery } from "@tanstack/react-query";
 
 interface InsuranceQuotesFormProps {
