@@ -6,6 +6,10 @@ import MultiStepForm from "@/components/ui/MultiStepForm";
 import TravelDetailsForm from "@/components/forms/TravelDetailsForm";
 import PersonalInfoForm from "@/components/forms/PersonalInfoForm";
 import InsuranceQuotesForm from "@/components/forms/InsuranceQuotesForm";
+import AdditionalInfoForm from "@/components/forms/AdditionalInfoForm";
+import ReviewConfirmation from "@/components/ui/ReviewConfirmation";
+import PaymentForm from "@/components/forms/PaymentForm";
+import ConfirmationForm from "@/components/forms/ConfirmationForm";
 import { TravelDetails, Traveler, InsurancePlan } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/components/ui/use-toast";
@@ -73,6 +77,33 @@ const Index = () => {
       description: `You've selected the ${plan.name} plan.`
     });
   };
+  
+  const handleAdditionalInfoSubmit = (data: TravelDetails) => {
+    setTravelDetails(data);
+    setCurrentStep(4);
+    toast({
+      title: "Additional information saved",
+      description: "Your additional details have been updated."
+    });
+  };
+  
+  const handleEditSection = (section: string) => {
+    if (section.startsWith("traveler-")) {
+      setCurrentStep(1); // Go to personal info step
+    } else if (section === "travel-details") {
+      setCurrentStep(0); // Go to travel details step
+    } else if (section === "plan") {
+      setCurrentStep(2); // Go to quotes step
+    }
+  };
+  
+  const handleReviewConfirm = () => {
+    setCurrentStep(5); // Proceed to payment
+  };
+  
+  const handlePaymentComplete = () => {
+    setCurrentStep(6); // Proceed to confirmation
+  };
 
   const handleBackStep = () => {
     setCurrentStep((prev) => Math.max(0, prev - 1));
@@ -105,13 +136,39 @@ const Index = () => {
           />
         );
       case 3:
-        return <div className="p-4">Additional Information Form (Step 4)</div>;
+        return (
+          <AdditionalInfoForm
+            travelDetails={travelDetails}
+            selectedPlan={selectedPlan!}
+            onSubmit={handleAdditionalInfoSubmit}
+            onBack={handleBackStep}
+          />
+        );
       case 4:
-        return <div className="p-4">Review & Confirm (Step 5)</div>;
+        return (
+          <ReviewConfirmation
+            travelDetails={travelDetails}
+            selectedPlan={selectedPlan!}
+            onProceed={handleReviewConfirm}
+            onEdit={handleEditSection}
+          />
+        );
       case 5:
-        return <div className="p-4">Payment Form (Step 6)</div>;
+        return (
+          <PaymentForm
+            travelDetails={travelDetails}
+            selectedPlan={selectedPlan!}
+            onSubmit={handlePaymentComplete}
+            onBack={handleBackStep}
+          />
+        );
       case 6:
-        return <div className="p-4">Purchase Confirmation (Step 7)</div>;
+        return (
+          <ConfirmationForm
+            travelDetails={travelDetails}
+            selectedPlan={selectedPlan!}
+          />
+        );
       default:
         return null;
     }

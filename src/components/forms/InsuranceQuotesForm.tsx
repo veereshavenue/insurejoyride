@@ -4,6 +4,7 @@ import { generateInsurancePlans } from "@/utils/mockData";
 import { differenceInDays } from "date-fns";
 import { InsurancePlan } from "@/types";
 import PlanCard from "@/components/ui/PlanCard";
+import PlanDetails from "@/components/ui/PlanDetails";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { ShieldCheck, Filter, Check } from "lucide-react";
@@ -24,6 +25,7 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   const [comparedPlans, setComparedPlans] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showComparisonView, setShowComparisonView] = useState(false);
+  const [viewingPlanDetails, setViewingPlanDetails] = useState<InsurancePlan | null>(null);
 
   useEffect(() => {
     // Calculate trip duration
@@ -72,12 +74,11 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   };
 
   const handleViewDetails = (plan: InsurancePlan) => {
-    console.log("View details for plan:", plan.id);
-    // This would typically open a modal with detailed plan information
-    toast({
-      title: "Plan Details",
-      description: `Viewing details for ${plan.name} plan.`,
-    });
+    setViewingPlanDetails(plan);
+  };
+
+  const handleBackFromDetails = () => {
+    setViewingPlanDetails(null);
   };
 
   const handleContinue = () => {
@@ -98,6 +99,20 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-insurance-blue mb-4"></div>
         <p className="text-gray-500">Generating personalized insurance quotes...</p>
       </div>
+    );
+  }
+
+  // If viewing plan details
+  if (viewingPlanDetails) {
+    return (
+      <PlanDetails 
+        plan={viewingPlanDetails} 
+        onBack={handleBackFromDetails} 
+        onSelect={(plan) => {
+          handleSelectPlan(plan);
+          handleBackFromDetails();
+        }}
+      />
     );
   }
 
