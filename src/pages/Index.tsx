@@ -5,12 +5,14 @@ import Footer from "@/components/layout/Footer";
 import MultiStepForm from "@/components/ui/MultiStepForm";
 import TravelDetailsForm from "@/components/forms/TravelDetailsForm";
 import PersonalInfoForm from "@/components/forms/PersonalInfoForm";
+import InsuranceQuotesForm from "@/components/forms/InsuranceQuotesForm";
 import { TravelDetails, Traveler, InsurancePlan } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
   
   // Define the steps for our multi-step form
   const steps = [
@@ -63,6 +65,15 @@ const Index = () => {
     });
   };
 
+  const handleInsuranceQuoteSelect = (plan: InsurancePlan) => {
+    setSelectedPlan(plan);
+    setCurrentStep(3);
+    toast({
+      title: "Insurance plan selected",
+      description: `You've selected the ${plan.name} plan.`
+    });
+  };
+
   const handleBackStep = () => {
     setCurrentStep((prev) => Math.max(0, prev - 1));
   };
@@ -86,7 +97,13 @@ const Index = () => {
           />
         );
       case 2:
-        return <div className="p-4">Insurance Quotes (Step 3)</div>;
+        return (
+          <InsuranceQuotesForm 
+            travelDetails={travelDetails}
+            onSubmit={handleInsuranceQuoteSelect}
+            onBack={handleBackStep}
+          />
+        );
       case 3:
         return <div className="p-4">Additional Information Form (Step 4)</div>;
       case 4:
