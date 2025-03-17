@@ -148,39 +148,26 @@ public class GetQuotesFunction {
                 
                 while (rs.next()) {
                     Map<String, Object> plan = new HashMap<>();
-                    plan.put("id", rs.getString("id"));
+                    String planId = rs.getString("id");
+                    
+                    plan.put("id", planId);
                     plan.put("name", rs.getString("name"));
                     plan.put("provider", rs.getString("provider"));
                     plan.put("base_price", rs.getDouble("base_price"));
                     plan.put("coverage_limit", rs.getString("coverage_limit"));
                     plan.put("rating", rs.getDouble("rating"));
                     plan.put("terms", rs.getString("terms"));
-                    
-                    // Handle array types
-                    Array exclusionsArray = rs.getArray("exclusions");
-                    if (exclusionsArray != null) {
-                        plan.put("exclusions", Arrays.asList((String[]) exclusionsArray.getArray()));
-                    } else {
-                        plan.put("exclusions", Collections.emptyList());
-                    }
-                    
                     plan.put("badge", rs.getString("badge"));
-                    
-                    Array prosArray = rs.getArray("pros");
-                    if (prosArray != null) {
-                        plan.put("pros", Arrays.asList((String[]) prosArray.getArray()));
-                    } else {
-                        plan.put("pros", Collections.emptyList());
-                    }
-                    
-                    Array consArray = rs.getArray("cons");
-                    if (consArray != null) {
-                        plan.put("cons", Arrays.asList((String[]) consArray.getArray()));
-                    } else {
-                        plan.put("cons", Collections.emptyList());
-                    }
-                    
                     plan.put("logo_url", rs.getString("logo_url"));
+                    
+                    // Get exclusions
+                    plan.put("exclusions", getExclusionsForPlan(conn, planId));
+                    
+                    // Get pros
+                    plan.put("pros", getProsForPlan(conn, planId));
+                    
+                    // Get cons
+                    plan.put("cons", getConsForPlan(conn, planId));
                     
                     plans.add(plan);
                 }
@@ -188,6 +175,66 @@ public class GetQuotesFunction {
         }
         
         return plans;
+    }
+
+    /**
+     * Get exclusions for a plan
+     */
+    private List<String> getExclusionsForPlan(Connection conn, String planId) throws SQLException {
+        List<String> exclusions = new ArrayList<>();
+        
+        String sql = "SELECT exclusion FROM plan_exclusions WHERE plan_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, planId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    exclusions.add(rs.getString("exclusion"));
+                }
+            }
+        }
+        
+        return exclusions;
+    }
+
+    /**
+     * Get pros for a plan
+     */
+    private List<String> getProsForPlan(Connection conn, String planId) throws SQLException {
+        List<String> pros = new ArrayList<>();
+        
+        String sql = "SELECT pro FROM plan_pros WHERE plan_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, planId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    pros.add(rs.getString("pro"));
+                }
+            }
+        }
+        
+        return pros;
+    }
+
+    /**
+     * Get cons for a plan
+     */
+    private List<String> getConsForPlan(Connection conn, String planId) throws SQLException {
+        List<String> cons = new ArrayList<>();
+        
+        String sql = "SELECT con FROM plan_cons WHERE plan_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, planId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    cons.add(rs.getString("con"));
+                }
+            }
+        }
+        
+        return cons;
     }
 
     /**
@@ -207,7 +254,7 @@ public class GetQuotesFunction {
                     Map<String, Object> benefit = new HashMap<>();
                     benefit.put("name", rs.getString("name"));
                     benefit.put("description", rs.getString("description"));
-                    benefit.put("limit", rs.getString("limit"));
+                    benefit.put("limit", rs.getString("benefit_limit"));
                     benefit.put("isHighlighted", rs.getBoolean("is_highlighted"));
                     
                     benefitsByPlanId

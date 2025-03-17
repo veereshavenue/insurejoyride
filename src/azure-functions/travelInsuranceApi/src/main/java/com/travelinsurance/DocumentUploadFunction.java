@@ -8,12 +8,13 @@ import org.json.JSONObject;
 import java.sql.*;
 import java.util.*;
 import java.util.Base64;
+import java.util.UUID;
 
 /**
  * Azure Functions with HTTP Trigger for Document Uploads
  */
 public class DocumentUploadFunction {
-    // Database connection info - this would normally come from app settings
+    // Database connection info
     private static final String DB_URL = System.getenv("MYSQL_CONNECTION_STRING");
     private static final String DB_USER = System.getenv("MYSQL_USER");
     private static final String DB_PASSWORD = System.getenv("MYSQL_PASSWORD");
@@ -58,18 +59,22 @@ public class DocumentUploadFunction {
             
             // Generate a unique filename
             String fileExtension = fileName.substring(fileName.lastIndexOf("."));
-            String uniqueFileName = userId + "/" + policyId + "/" + travelerId + "/" + 
-                                   documentType + "_" + System.currentTimeMillis() + fileExtension;
+            String uniqueFilePath = userId + "/" + policyId + "/" + travelerId + "/" + 
+                                  documentType + "_" + System.currentTimeMillis() + fileExtension;
             
             // In a real application, this would upload to Azure Blob Storage
-            // For now, we'll simulate the upload and return a mock URL
-            String documentUrl = simulateFileUpload(fileData, uniqueFileName);
+            // Here, we'll simulate the upload and return a mock URL
+            String documentUrl = simulateFileUpload(fileData, uniqueFilePath);
             
-            // Update the database with the document URL
-            updateDocumentUrl(travelerId, documentType, documentUrl);
+            // Store document info in the database
+            String documentId = storeDocumentInfo(travelerId, documentType, uniqueFilePath, fileName, contentType, fileData.length());
+            
+            // Update the traveler record with the document URL
+            updateTravelerDocumentUrl(travelerId, documentType, documentUrl);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
+            response.put("documentId", documentId);
             response.put("url", documentUrl);
             
             return request
@@ -96,20 +101,46 @@ public class DocumentUploadFunction {
      * Simulate uploading a file to storage
      * In a real app, this would use the Azure Storage SDK
      */
-    private String simulateFileUpload(String base64Data, String fileName) {
+    private String simulateFileUpload(String base64Data, String filePath) {
         // In a real application, this method would:
         // 1. Decode the base64 data
         // 2. Upload the file to Azure Blob Storage
         // 3. Return the URL
         
         // For this example, we'll just return a simulated URL
-        return "https://traveldocuments.blob.core.windows.net/travel-documents/" + fileName;
+        return "https://traveldocuments.blob.core.windows.net/travel-documents/" + filePath;
+    }
+    
+    /**
+     * Store document information in the database
+     */
+    private String storeDocumentInfo(String travelerId, String documentType, String filePath, 
+                                  String originalFilename, String contentType, int fileSize) throws SQLException {
+        String documentId = UUID.randomUUID().toString();
+        
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String sql = "INSERT INTO document_uploads (id, traveler_id, document_type, file_path, original_filename, content_type, file_size) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, documentId);
+                stmt.setString(2, travelerId);
+                stmt.setString(3, documentType);
+                stmt.setString(4, filePath);
+                stmt.setString(5, originalFilename);
+                stmt.setString(6, contentType);
+                stmt.setInt(7, fileSize);
+                
+                stmt.executeUpdate();
+            }
+        }
+        
+        return documentId;
     }
     
     /**
      * Update the traveler record with the document URL
      */
-    private void updateDocumentUrl(String travelerId, String documentType, String documentUrl) throws SQLException {
+    private void updateTravelerDocumentUrl(String travelerId, String documentType, String documentUrl) throws SQLException {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             // Determine which field to update based on document type
             String fieldName;

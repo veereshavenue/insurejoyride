@@ -10,56 +10,16 @@ This document provides comprehensive instructions for deploying the entire Trave
 - GitHub account for source code repository
 - Node.js and npm installed for front-end development
 - Maven installed for Java backend development
-- Supabase account (for database)
+- Supabase account (for authentication only)
 
 ## Infrastructure Components
 
 1. **Front-end**: Azure Static Web Apps
 2. **Back-end APIs**: Azure Functions (Java)
-3. **Database**: Supabase (PostgreSQL) and Azure MySQL for Azure Functions
+3. **Database**: Azure MySQL
+4. **Authentication**: Supabase Auth (authentication only)
 
-## Step 1: Set Up Supabase
-
-1. Create a new Supabase project
-2. Execute the migration scripts in `src/db/migration.sql`
-3. Note your Supabase URL and anon key
-4. Create and configure the storage bucket for travel documents:
-   ```sql
-   INSERT INTO storage.buckets (id, name, public)
-   VALUES ('travel_documents', 'travel_documents', true);
-   
-   -- Set up RLS policies for the travel_documents bucket
-   -- Allow authenticated users to upload their own travel documents
-   CREATE POLICY "Users can upload their own travel documents"
-   ON storage.objects
-   FOR INSERT TO authenticated
-   WITH CHECK (
-     bucket_id = 'travel_documents' AND
-     (storage.foldername(name))[1] IN (
-       SELECT id::text FROM public.travel_policies WHERE user_id = auth.uid()
-     )
-   );
-   
-   -- Allow authenticated users to view their own travel documents
-   CREATE POLICY "Users can view their own travel documents"
-   ON storage.objects
-   FOR SELECT TO authenticated
-   USING (
-     bucket_id = 'travel_documents' AND
-     (storage.foldername(name))[1] IN (
-       SELECT id::text FROM public.travel_policies WHERE user_id = auth.uid()
-     )
-   );
-   ```
-
-5. Deploy the Edge Functions:
-   ```bash
-   supabase functions deploy get-insurance-quotes
-   supabase functions deploy process-payment
-   supabase functions deploy purchase-plan
-   ```
-
-## Step 2: Set Up Azure MySQL Database
+## Step 1: Set Up Azure MySQL Database
 
 1. Create an Azure MySQL database:
 
@@ -73,13 +33,22 @@ az mysql server create --resource-group travel-insurance-rg --name travel-insura
 az mysql server firewall-rule create --resource-group travel-insurance-rg --server travel-insurance-mysql --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
 ```
 
-3. Create the database and execute the schema:
+3. Create the database schema:
 
 ```bash
 mysql -h travel-insurance-mysql.mysql.database.azure.com -u adminuser@travel-insurance-mysql -p
 ```
 
-4. Import the SQL schema from `src/db/migration.sql`
+4. Execute the schema creation script from `src/db/mysql_migration.sql`
+
+## Step 2: Set Up Supabase (For Authentication Only)
+
+1. Create a new Supabase project
+2. Configure authentication settings:
+   - Go to Authentication > Settings
+   - Enable Email/Password login
+   - Customize email templates if needed
+3. Note your Supabase URL and anon key for front-end authentication
 
 ## Step 3: Deploy Azure Functions (Java Backend)
 
@@ -107,8 +76,8 @@ mvn azure-functions:deploy
      - `MYSQL_CONNECTION_STRING`: jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true
      - `MYSQL_USER`: adminuser@travel-insurance-mysql
      - `MYSQL_PASSWORD`: <your-password>
-     - `SUPABASE_URL`: Your Supabase URL
-     - `SUPABASE_ANON_KEY`: Your Supabase anon key
+     - `SUPABASE_URL`: Your Supabase URL (for authentication verification)
+     - `SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication verification)
 
 ## Step 4: Deploy Front-end to Azure Static Web Apps
 
@@ -123,8 +92,8 @@ az staticwebapp create --name travel-insurance-app --resource-group travel-insur
 3. Configure environment variables in Azure Portal:
    - Go to your Static Web App > Configuration
    - Add these application settings:
-     - `VITE_SUPABASE_URL`: Your Supabase URL
-     - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+     - `VITE_SUPABASE_URL`: Your Supabase URL (for authentication)
+     - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication)
      - `VITE_API_URL`: URL of your Azure Functions
 
 ## Step 5: Configure GitHub Actions for CI/CD
@@ -180,8 +149,8 @@ jobs:
 
 2. Add the necessary secrets to your GitHub repository:
    - `AZURE_STATIC_WEB_APPS_API_TOKEN`: From Azure Static Web App deployment
-   - `VITE_SUPABASE_URL`: Your Supabase URL
-   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+   - `VITE_SUPABASE_URL`: Your Supabase URL (for authentication)
+   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key (for authentication)
    - `VITE_API_URL`: URL of your Azure Functions
 
 ## Step 6: CI/CD for Azure Functions
