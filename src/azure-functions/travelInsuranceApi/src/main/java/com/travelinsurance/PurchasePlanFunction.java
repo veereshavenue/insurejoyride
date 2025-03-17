@@ -139,8 +139,8 @@ public class PurchasePlanFunction {
             stmt.setString(5, travelDetails.getString("originCountry"));
             stmt.setString(6, travelDetails.getString("destinationCountry"));
             stmt.setString(7, travelDetails.getString("tripType"));
-            stmt.setDate(8, Date.valueOf(travelDetails.getString("startDate")));
-            stmt.setDate(9, Date.valueOf(travelDetails.getString("endDate")));
+            stmt.setDate(8, java.sql.Date.valueOf(travelDetails.getString("startDate")));
+            stmt.setDate(9, java.sql.Date.valueOf(travelDetails.getString("endDate")));
             stmt.setString(10, travelDetails.getString("coverType"));
             stmt.setDouble(11, price);
             stmt.setString(12, "Active");
@@ -174,7 +174,7 @@ public class PurchasePlanFunction {
             stmt.setString(1, policyId);
             stmt.setString(2, traveler.getString("firstName"));
             stmt.setString(3, traveler.getString("lastName"));
-            stmt.setDate(4, Date.valueOf(traveler.getString("dateOfBirth")));
+            stmt.setDate(4, java.sql.Date.valueOf(traveler.getString("dateOfBirth")));
             
             stmt.setString(5, traveler.optString("email", null));
             stmt.setString(6, traveler.optString("phone", null));
@@ -186,9 +186,9 @@ public class PurchasePlanFunction {
             if (passport != null) {
                 stmt.setString(9, passport.optString("number", null));
                 String issueDate = passport.optString("issueDate", null);
-                stmt.setDate(10, issueDate != null ? Date.valueOf(issueDate) : null);
+                stmt.setDate(10, issueDate != null ? java.sql.Date.valueOf(issueDate) : null);
                 String expiryDate = passport.optString("expiryDate", null);
-                stmt.setDate(11, expiryDate != null ? Date.valueOf(expiryDate) : null);
+                stmt.setDate(11, expiryDate != null ? java.sql.Date.valueOf(expiryDate) : null);
                 stmt.setString(12, passport.optString("nationality", null));
             } else {
                 stmt.setNull(9, Types.VARCHAR);
