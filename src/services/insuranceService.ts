@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   TravelDetails, 
   InsurancePlan, 
@@ -16,28 +16,20 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rbsmlwqhmmjwl
  */
 export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<InsurancePlan[]> => {
   try {
-    // Get session for authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('User not authenticated');
-    }
-
-    // Call Supabase Edge Function
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-insurance-quotes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ travelDetails }),
+    console.log('Fetching insurance quotes for:', travelDetails);
+    
+    // Call Supabase Edge Function using the functions.invoke method
+    const { data, error } = await supabase.functions.invoke('get-insurance-quotes', {
+      body: { travelDetails },
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to fetch insurance quotes');
+    if (error) {
+      console.error('Error invoking get-insurance-quotes function:', error);
+      throw new Error(error.message || 'Failed to fetch insurance quotes');
     }
 
-    return await response.json();
+    console.log('Received quotes data:', data);
+    return data || [];
   } catch (error) {
     console.error('Error fetching insurance quotes:', error);
     return [];
@@ -110,32 +102,22 @@ export const processPayment = async (
   }
 ): Promise<{ success: boolean; reference?: string; error?: string }> => {
   try {
-    // Get session for authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    // Call Supabase Edge Function
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/process-payment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(paymentDetails),
+    console.log('Processing payment:', paymentDetails);
+    
+    // Call Supabase Edge Function using the functions.invoke method
+    const { data, error } = await supabase.functions.invoke('process-payment', {
+      body: paymentDetails,
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (error) {
+      console.error('Error invoking process-payment function:', error);
       return { 
         success: false, 
-        error: result.error || 'Payment processing failed' 
+        error: error.message || 'Payment processing failed' 
       };
     }
-
-    return result;
+    
+    return data || { success: false, error: 'No response from payment service' };
   } catch (error) {
     console.error('Error processing payment:', error);
     return { 
@@ -156,42 +138,28 @@ export const purchaseInsurancePlan = async (
   paymentReference?: string
 ): Promise<{ success: boolean; policyId?: string; referenceNumber?: string; error?: string }> => {
   try {
-    // Get session for authentication
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    // Call Supabase Edge Function
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/purchase-plan`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
+    console.log('Purchasing plan:', { planId, travelDetails, price, paymentMethod });
+    
+    // Call Supabase Edge Function using the functions.invoke method
+    const { data, error } = await supabase.functions.invoke('purchase-plan', {
+      body: {
         planId,
         travelDetails,
         price,
         paymentMethod,
         paymentReference
-      }),
+      },
     });
 
-    const result = await response.json();
-    
-    if (!response.ok) {
+    if (error) {
+      console.error('Error invoking purchase-plan function:', error);
       return { 
         success: false, 
-        error: result.error || 'Failed to purchase insurance plan' 
+        error: error.message || 'Failed to purchase insurance plan' 
       };
     }
-
-    return {
-      success: true,
-      policyId: result.policyId,
-      referenceNumber: result.referenceNumber
-    };
+    
+    return data || { success: false, error: 'No response from purchase service' };
   } catch (error) {
     console.error('Error purchasing insurance plan:', error);
     return { 

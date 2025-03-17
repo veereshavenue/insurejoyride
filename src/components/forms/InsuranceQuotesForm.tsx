@@ -5,7 +5,7 @@ import PlanCard from "@/components/ui/PlanCard";
 import PlanDetails from "@/components/ui/PlanDetails";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { ShieldCheck, Filter, Check } from "lucide-react";
+import { ShieldCheck, Filter, Check, AlertCircle } from "lucide-react";
 import { getInsuranceQuotes, getPlanDetails } from "@/services/insuranceService";
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,10 +25,16 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   const [showComparisonView, setShowComparisonView] = useState(false);
   const [viewingPlanDetails, setViewingPlanDetails] = useState<InsurancePlan | null>(null);
   
-  const { data: insurancePlans = [], isLoading, error } = useQuery({
+  const { data: insurancePlans = [], isLoading, error, refetch } = useQuery({
     queryKey: ['insuranceQuotes', travelDetails],
-    queryFn: () => getInsuranceQuotes(travelDetails),
+    queryFn: async () => {
+      console.log('Fetching insurance quotes with travel details:', travelDetails);
+      const quotes = await getInsuranceQuotes(travelDetails);
+      console.log('Received insurance quotes:', quotes);
+      return quotes;
+    },
     enabled: !!travelDetails.startDate && !!travelDetails.endDate,
+    retry: 2,
   });
 
   const { data: planDetailsData, isLoading: isPlanDetailsLoading } = useQuery({
@@ -42,6 +48,23 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
       setViewingPlanDetails(planDetailsData);
     }
   }, [planDetailsData]);
+
+  // If there's an error or no plans are returned, show a helpful message
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error loading insurance quotes",
+        description: "There was a problem loading insurance quotes. Please try again.",
+        variant: "destructive"
+      });
+    } else if (!isLoading && insurancePlans.length === 0) {
+      toast({
+        title: "No insurance plans found",
+        description: "We couldn't find any insurance plans matching your criteria.",
+        variant: "destructive"
+      });
+    }
+  }, [error, isLoading, insurancePlans]);
 
   const handleSelectPlan = (plan: InsurancePlan) => {
     setSelectedPlan(plan);
@@ -92,6 +115,7 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
       <div className="flex flex-col items-center justify-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-insurance-blue mb-4"></div>
         <p className="text-gray-500">Generating personalized insurance quotes...</p>
+        <p className="text-xs text-gray-400 mt-2">This may take a few moments</p>
       </div>
     );
   }
@@ -99,8 +123,29 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   if (error) {
     return (
       <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-insurance-red mx-auto mb-4" />
         <p className="text-insurance-red mb-4">There was an error loading insurance quotes.</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <pre className="text-xs text-gray-500 bg-gray-100 p-2 rounded mb-4 max-w-xl mx-auto overflow-auto">
+          {error instanceof Error ? error.message : 'Unknown error'}
+        </pre>
+        <Button onClick={() => refetch()}>Try Again</Button>
+      </div>
+    );
+  }
+
+  if (insurancePlans.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+        <p className="text-gray-700 mb-4">No insurance plans found for your search criteria.</p>
+        <div className="flex justify-center gap-4">
+          <Button variant="outline" onClick={onBack}>
+            Modify Search
+          </Button>
+          <Button onClick={() => refetch()}>
+            Retry Search
+          </Button>
+        </div>
       </div>
     );
   }
@@ -126,7 +171,7 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
       />
     );
   }
-
+  
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">

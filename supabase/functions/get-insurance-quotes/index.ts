@@ -4,19 +4,31 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 serve(async (req) => {
+  console.log('Edge function get-insurance-quotes called with request method:', req.method);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    console.log('Handling OPTIONS request with CORS headers');
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    console.log('Initializing Supabase client with URL:', supabaseUrl ? 'URL provided' : 'URL missing');
+    
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      supabaseUrl ?? '',
+      supabaseAnonKey ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
+    );
 
-    const { travelDetails } = await req.json()
+    // Parse the request body
+    const requestData = await req.json();
+    const { travelDetails } = requestData;
+    
+    console.log('Processing travel details:', JSON.stringify(travelDetails));
     
     // Fetch all insurance plans with their benefits
     const { data: plansData, error: plansError } = await supabaseClient
@@ -25,49 +37,56 @@ serve(async (req) => {
         *,
         insurance_benefits(*)
       `)
-      .eq('is_active', true)
+      .eq('is_active', true);
     
-    if (plansError) throw plansError
+    if (plansError) {
+      console.error('Error fetching insurance plans:', plansError);
+      throw plansError;
+    }
+    
+    console.log(`Successfully fetched ${plansData.length} insurance plans`);
     
     // Calculate trip days
-    const startDate = new Date(travelDetails.startDate)
-    const endDate = new Date(travelDetails.endDate)
+    const startDate = new Date(travelDetails.startDate);
+    const endDate = new Date(travelDetails.endDate);
     const tripDays = Math.max(
       1,
       Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    )
+    );
+    
+    console.log(`Trip duration: ${tripDays} days`);
     
     // Calculate prices based on travel details
     const quotes = plansData.map(plan => {
       // Base multipliers
-      let priceMultiplier = 1
+      let priceMultiplier = 1;
       
       // Adjust for coverage type
       if (travelDetails.coverageType === 'Worldwide') {
-        priceMultiplier *= 1.5
+        priceMultiplier *= 1.5;
       } else if (travelDetails.coverageType === 'Schengen') {
-        priceMultiplier *= 1.2
+        priceMultiplier *= 1.2;
       }
       
       // Adjust for trip type
       if (travelDetails.tripType === 'Annual Multi-Trips') {
-        priceMultiplier *= 4 // Annual plans cost more
+        priceMultiplier *= 4; // Annual plans cost more
       } else {
         // Adjust for trip duration for single trips
-        priceMultiplier *= Math.min(tripDays / 7, 10) // Cap at 10x for very long trips
+        priceMultiplier *= Math.min(tripDays / 7, 10); // Cap at 10x for very long trips
       }
       
       // Adjust for cover type and number of travelers
-      const numTravelers = travelDetails.travelers.length
+      const numTravelers = travelDetails.travelers?.length || 1;
       if (travelDetails.coverType === 'Family') {
-        priceMultiplier *= Math.min(1.8, 1 + (numTravelers * 0.2)) // Family discount
+        priceMultiplier *= Math.min(1.8, 1 + (numTravelers * 0.2)); // Family discount
       } else if (travelDetails.coverType === 'Group') {
-        priceMultiplier *= Math.min(2.5, 1 + (numTravelers * 0.25)) // Group rate
+        priceMultiplier *= Math.min(2.5, 1 + (numTravelers * 0.25)); // Group rate
       } else {
-        priceMultiplier *= numTravelers // Individual: direct multiplication
+        priceMultiplier *= numTravelers; // Individual: direct multiplication
       }
       
-      const calculatedPrice = Math.round(plan.base_price * priceMultiplier)
+      const calculatedPrice = Math.round(plan.base_price * priceMultiplier);
       
       // Format the response
       return {
@@ -84,8 +103,10 @@ serve(async (req) => {
         pros: plan.pros || [],
         cons: plan.cons || [],
         logoUrl: plan.logo_url,
-      }
-    })
+      };
+    });
+    
+    console.log(`Generated ${quotes.length} insurance quotes`);
 
     return new Response(
       JSON.stringify(quotes),
@@ -93,14 +114,15 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
-    )
+    );
   } catch (error) {
+    console.error('Error in get-insurance-quotes edge function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
       }
-    )
+    );
   }
-})
+});
