@@ -1,8 +1,4 @@
-
 import { 
-  signUp,
-  signIn,
-  signOut,
   getCurrentUser,
   getInsurancePlans,
   getInsurancePlan,

@@ -1,35 +1,34 @@
 
-import { supabase as supabaseClient } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/types/supabase';
 
-// Export the client for backward compatibility
-export const supabaseClient = supabaseClient;
-export const supabase = supabaseClient; // Export as alias for backward compatibility
+// Export the client for use throughout the application
+export { supabase };
 
 // Authentication helpers
 export const signIn = async (email: string, password: string) => {
-  return await supabaseClient.auth.signInWithPassword({ email, password });
+  return await supabase.auth.signInWithPassword({ email, password });
 };
 
 export const signUp = async (email: string, password: string) => {
-  return await supabaseClient.auth.signUp({ email, password });
+  return await supabase.auth.signUp({ email, password });
 };
 
 export const signOut = async () => {
-  return await supabaseClient.auth.signOut();
+  return await supabase.auth.signOut();
 };
 
 export const getCurrentUser = async () => {
-  return await supabaseClient.auth.getUser();
+  return await supabase.auth.getUser();
 };
 
 export const getSession = async () => {
-  return await supabaseClient.auth.getSession();
+  return await supabase.auth.getSession();
 };
 
 // User profile functions
 export const createUserProfile = async (userProfileData: any) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_profiles')
     .insert(userProfileData)
     .select()
@@ -40,7 +39,7 @@ export const createUserProfile = async (userProfileData: any) => {
 };
 
 export const getUserProfile = async (userId: string) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
     .eq('user_id', userId)
@@ -51,7 +50,7 @@ export const getUserProfile = async (userId: string) => {
 };
 
 export const updateUserProfile = async (userId: string, updates: any) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('user_profiles')
     .update(updates)
     .eq('user_id', userId)
@@ -64,7 +63,7 @@ export const updateUserProfile = async (userId: string, updates: any) => {
 
 // Insurance plan functions
 export const getInsurancePlans = async () => {
-  const { data: plans, error: plansError } = await supabaseClient
+  const { data: plans, error: plansError } = await supabase
     .from('insurance_plans')
     .select('*, insurance_benefits(*)');
   
@@ -73,7 +72,7 @@ export const getInsurancePlans = async () => {
 };
 
 export const getInsurancePlan = async (planId: string) => {
-  const { data: plan, error: planError } = await supabaseClient
+  const { data: plan, error: planError } = await supabase
     .from('insurance_plans')
     .select('*, insurance_benefits(*)')
     .eq('id', planId)
@@ -85,7 +84,7 @@ export const getInsurancePlan = async (planId: string) => {
 
 // Travel policy functions
 export const createTravelPolicy = async (policyData: any) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('travel_policies')
     .insert(policyData)
     .select()
@@ -96,7 +95,7 @@ export const createTravelPolicy = async (policyData: any) => {
 };
 
 export const getUserPolicies = async (userId: string) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('travel_policies')
     .select(`
       *,
@@ -111,7 +110,7 @@ export const getUserPolicies = async (userId: string) => {
 
 // Traveler info functions
 export const createTravelerInfo = async (travelerData: any) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('traveler_info')
     .insert(travelerData)
     .select()
@@ -123,7 +122,7 @@ export const createTravelerInfo = async (travelerData: any) => {
 
 // Payment transaction functions
 export const createPaymentTransaction = async (transactionData: any) => {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('payment_transactions')
     .insert(transactionData)
     .select()
