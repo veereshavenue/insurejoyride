@@ -7,6 +7,8 @@ import { InsurancePlan, InsuranceBenefit, TravelDetails, PaymentMethod } from '@
  */
 export const getPlanDetails = async (planId: string): Promise<InsurancePlan | null> => {
   try {
+    console.log('Fetching details for plan:', planId);
+    
     // Fetch plan details
     const { data: planData, error: planError } = await supabase
       .from('insurance_plans')
@@ -14,8 +16,17 @@ export const getPlanDetails = async (planId: string): Promise<InsurancePlan | nu
       .eq('id', planId)
       .single();
 
-    if (planError) throw planError;
-    if (!planData) return null;
+    if (planError) {
+      console.error('Error fetching plan details:', planError);
+      throw new Error(planError.message || 'Failed to fetch plan details');
+    }
+    
+    if (!planData) {
+      console.log('No plan found with ID:', planId);
+      return null;
+    }
+
+    console.log('Plan details fetched:', planData);
 
     // Fetch benefits for this plan
     const { data: benefitsData, error: benefitsError } = await supabase
@@ -23,7 +34,12 @@ export const getPlanDetails = async (planId: string): Promise<InsurancePlan | nu
       .select('*')
       .eq('plan_id', planId);
 
-    if (benefitsError) throw benefitsError;
+    if (benefitsError) {
+      console.error('Error fetching plan benefits:', benefitsError);
+      throw new Error(benefitsError.message || 'Failed to fetch plan benefits');
+    }
+
+    console.log(`Fetched ${benefitsData?.length || 0} benefits for plan ${planId}`);
 
     const benefits: InsuranceBenefit[] = (benefitsData || []).map(benefit => ({
       name: benefit.name,
@@ -49,7 +65,7 @@ export const getPlanDetails = async (planId: string): Promise<InsurancePlan | nu
     };
   } catch (error) {
     console.error('Error fetching plan details:', error);
-    return null;
+    throw error; // Re-throw the error for proper error handling
   }
 };
 

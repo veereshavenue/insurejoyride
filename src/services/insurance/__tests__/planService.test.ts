@@ -2,6 +2,7 @@
 import { getPlanDetails, purchaseInsurancePlan } from '../planService';
 import { supabase } from '@/integrations/supabase/client';
 import { TravelDetails, PaymentMethod } from '@/types';
+import '@types/jest';
 
 // Mock Supabase client
 jest.mock('@/integrations/supabase/client', () => ({
