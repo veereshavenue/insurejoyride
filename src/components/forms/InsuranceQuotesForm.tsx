@@ -1,16 +1,16 @@
-
 import React, { useState, useEffect } from "react";
-import { generateInsurancePlans } from "@/utils/mockData";
 import { differenceInDays } from "date-fns";
-import { InsurancePlan } from "@/types";
+import { InsurancePlan, TravelDetails } from "@/types";
 import PlanCard from "@/components/ui/PlanCard";
 import PlanDetails from "@/components/ui/PlanDetails";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { ShieldCheck, Filter, Check } from "lucide-react";
+import { getInsuranceQuotes, getPlanDetails } from "@/services/insuranceService";
+import { useQuery } from "@tanstack/react-query";
 
 interface InsuranceQuotesFormProps {
-  travelDetails: any;
+  travelDetails: TravelDetails;
   onSubmit: (selectedPlan: InsurancePlan) => void;
   onBack: () => void;
 }
@@ -20,34 +20,28 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   onSubmit,
   onBack 
 }) => {
-  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
   const [comparedPlans, setComparedPlans] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showComparisonView, setShowComparisonView] = useState(false);
   const [viewingPlanDetails, setViewingPlanDetails] = useState<InsurancePlan | null>(null);
+  
+  const { data: insurancePlans = [], isLoading, error } = useQuery({
+    queryKey: ['insuranceQuotes', travelDetails],
+    queryFn: () => getInsuranceQuotes(travelDetails),
+    enabled: !!travelDetails.startDate && !!travelDetails.endDate,
+  });
+
+  const { data: planDetailsData, isLoading: isPlanDetailsLoading } = useQuery({
+    queryKey: ['planDetails', viewingPlanDetails?.id],
+    queryFn: () => viewingPlanDetails ? getPlanDetails(viewingPlanDetails.id) : null,
+    enabled: !!viewingPlanDetails,
+  });
 
   useEffect(() => {
-    // Calculate trip duration
-    let duration = 7; // Default duration
-    if (travelDetails.startDate && travelDetails.endDate) {
-      const start = new Date(travelDetails.startDate);
-      const end = new Date(travelDetails.endDate);
-      duration = differenceInDays(end, start) + 1;
+    if (planDetailsData && viewingPlanDetails) {
+      setViewingPlanDetails(planDetailsData);
     }
-
-    // Simulate API call to get insurance plans
-    setTimeout(() => {
-      const plans = generateInsurancePlans(
-        travelDetails.coverageType,
-        travelDetails.tripType,
-        duration,
-        travelDetails.travelers.length
-      );
-      setInsurancePlans(plans);
-      setIsLoading(false);
-    }, 1000);
-  }, [travelDetails]);
+  }, [planDetailsData]);
 
   const handleSelectPlan = (plan: InsurancePlan) => {
     setSelectedPlan(plan);
@@ -102,7 +96,24 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
     );
   }
 
-  // If viewing plan details
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-insurance-red mb-4">There was an error loading insurance quotes.</p>
+        <Button onClick={() => window.location.reload()}>Try Again</Button>
+      </div>
+    );
+  }
+
+  if (viewingPlanDetails && isPlanDetailsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-insurance-blue mb-4"></div>
+        <p className="text-gray-500">Loading plan details...</p>
+      </div>
+    );
+  }
+
   if (viewingPlanDetails) {
     return (
       <PlanDetails 

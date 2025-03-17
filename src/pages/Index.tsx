@@ -13,10 +13,14 @@ import ConfirmationForm from "@/components/forms/ConfirmationForm";
 import { TravelDetails, Traveler, InsurancePlan } from "@/types";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/components/ui/use-toast";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/react-query";
+import { supabase } from "@/lib/supabase";
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
+  const [userId, setUserId] = useState<string>(""); // Will be set when user authenticates
   
   // Define the steps for our multi-step form
   const steps = [
@@ -49,6 +53,33 @@ const Index = () => {
       }
     ]
   });
+
+  // Check for Supabase auth session on load
+  React.useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setUserId(session.user.id);
+      }
+    };
+    
+    checkSession();
+    
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user?.id) {
+          setUserId(session.user.id);
+        } else {
+          setUserId("");
+        }
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Handle form submissions for each step
   const handleTravelDetailsSubmit = (data: TravelDetails) => {
@@ -160,6 +191,7 @@ const Index = () => {
             selectedPlan={selectedPlan!}
             onSubmit={handlePaymentComplete}
             onBack={handleBackStep}
+            userId={userId}
           />
         );
       case 6:
@@ -175,24 +207,26 @@ const Index = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header />
-      <main className="flex-grow pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-              <MultiStepForm 
-                steps={steps} 
-                currentStep={currentStep}
-              >
-                {renderStepContent()}
-              </MultiStepForm>
+    <QueryClientProvider client={queryClient}>
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <Header />
+        <main className="flex-grow pt-24 pb-16">
+          <div className="container mx-auto px-4">
+            <div className="max-w-5xl mx-auto">
+              <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
+                <MultiStepForm 
+                  steps={steps} 
+                  currentStep={currentStep}
+                >
+                  {renderStepContent()}
+                </MultiStepForm>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
-      <Footer />
-    </div>
+        </main>
+        <Footer />
+      </div>
+    </QueryClientProvider>
   );
 };
 
