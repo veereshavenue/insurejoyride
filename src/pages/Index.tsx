@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MultiStepForm from "@/components/ui/MultiStepForm";
@@ -21,6 +20,8 @@ const Index = () => {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
   const [userId, setUserId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Define the steps for our multi-step form
   const steps = [
@@ -55,11 +56,25 @@ const Index = () => {
   });
 
   // Check for Supabase auth session on load
-  React.useEffect(() => {
+  useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user?.id) {
-        setUserId(session.user.id);
+      try {
+        setIsLoading(true);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error.message);
+          // Don't set error state - allow the app to continue without authentication
+        }
+        
+        if (session?.user?.id) {
+          setUserId(session.user.id);
+        }
+      } catch (err) {
+        console.error("Error in checkSession:", err);
+        // Don't set error state - allow the app to continue without authentication
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -206,6 +221,24 @@ const Index = () => {
     }
   };
 
+  // If there's an error that prevents the app from running
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Application Error</h1>
+          <p className="text-gray-700 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-insurance-blue text-white px-4 py-2 rounded hover:bg-insurance-blue/90"
+          >
+            Reload Application
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -213,13 +246,19 @@ const Index = () => {
         <main className="flex-grow pt-24 pb-16">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
-              <div className="bg-white shadow-sm rounded-lg p-6 md:p-8">
-                <MultiStepForm 
-                  steps={steps} 
-                  currentStep={currentStep}
-                >
-                  {renderStepContent()}
-                </MultiStepForm>
+              <div className="bg-white shadow-sm rounded-lg p-6 md:p-8 mb-12">
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-insurance-blue"></div>
+                  </div>
+                ) : (
+                  <MultiStepForm 
+                    steps={steps} 
+                    currentStep={currentStep}
+                  >
+                    {renderStepContent()}
+                  </MultiStepForm>
+                )}
               </div>
             </div>
           </div>
