@@ -97,7 +97,7 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({
         </div>
       </div>
 
-      <div className="relative min-h-[400px]">
+      <div className="relative min-h-[400px] mb-16">
         <div
           className={cn(
             "absolute w-full transition-all duration-500 transform",
