@@ -37,7 +37,7 @@ serve(async (req) => {
         *,
         insurance_benefits(*)
       `)
-     // .eq('is_active', true);
+      .eq('is_active', true);
     
     if (plansError) {
       console.error('Error fetching insurance plans:', plansError);
