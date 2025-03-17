@@ -6,106 +6,39 @@ import {
   InsuranceBenefit, 
   DbInsurancePlan, 
   DbInsuranceBenefit,
-  DbTravelPolicy,
-  DbTravelerInfo,
-  DbPaymentTransaction,
-  PaymentMethod,
-  PaymentStatus
+  PaymentMethod
 } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
+
+// Supabase API endpoint URLs
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 /**
  * Get insurance quotes based on travel details
  */
 export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<InsurancePlan[]> => {
   try {
-    // Fetch active insurance plans
-    const { data: plansData, error: plansError } = await supabase
-      .from('insurance_plans')
-      .select('*')
-      .eq('is_active', true);
+    // Get session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('User not authenticated');
+    }
 
-    if (plansError) throw plansError;
-    if (!plansData) return [];
-
-    // Calculate the number of days
-    const startDate = new Date(travelDetails.startDate);
-    const endDate = new Date(travelDetails.endDate);
-    const tripDays = Math.max(
-      1,
-      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-    );
-
-    // Fetch benefits for all plans
-    const { data: benefitsData, error: benefitsError } = await supabase
-      .from('insurance_benefits')
-      .select('*');
-
-    if (benefitsError) throw benefitsError;
-    if (!benefitsData) return [];
-
-    // Group benefits by plan_id
-    const benefitsByPlanId = benefitsData.reduce((acc, benefit) => {
-      if (!acc[benefit.plan_id]) {
-        acc[benefit.plan_id] = [];
-      }
-      acc[benefit.plan_id].push({
-        name: benefit.name,
-        description: benefit.description,
-        limit: benefit.limit,
-        isHighlighted: benefit.is_highlighted,
-      });
-      return acc;
-    }, {} as Record<string, InsuranceBenefit[]>);
-
-    // Calculate final price based on travel details
-    return plansData.map((plan: DbInsurancePlan) => {
-      // Base multipliers
-      let priceMultiplier = 1;
-      
-      // Adjust for coverage type
-      if (travelDetails.coverageType === 'Worldwide') {
-        priceMultiplier *= 1.5;
-      } else if (travelDetails.coverageType === 'Schengen') {
-        priceMultiplier *= 1.2;
-      }
-      
-      // Adjust for trip type
-      if (travelDetails.tripType === 'Annual Multi-Trips') {
-        priceMultiplier *= 4; // Annual plans cost more
-      } else {
-        // Adjust for trip duration for single trips
-        priceMultiplier *= Math.min(tripDays / 7, 10); // Cap at 10x for very long trips
-      }
-      
-      // Adjust for cover type and number of travelers
-      const numTravelers = travelDetails.travelers.length;
-      if (travelDetails.coverType === 'Family') {
-        priceMultiplier *= Math.min(1.8, 1 + (numTravelers * 0.2)); // Family discount
-      } else if (travelDetails.coverType === 'Group') {
-        priceMultiplier *= Math.min(2.5, 1 + (numTravelers * 0.25)); // Group rate
-      } else {
-        priceMultiplier *= numTravelers; // Individual: direct multiplication
-      }
-      
-      const calculatedPrice = Math.round(plan.base_price * priceMultiplier);
-      
-      return {
-        id: plan.id,
-        name: plan.name,
-        provider: plan.provider,
-        price: calculatedPrice,
-        benefits: benefitsByPlanId[plan.id] || [],
-        coverageLimit: plan.coverage_limit,
-        rating: plan.rating,
-        terms: plan.terms,
-        exclusions: plan.exclusions || [],
-        badge: plan.badge as ('Popular' | 'Best Value' | 'Premium' | undefined),
-        pros: plan.pros || [],
-        cons: plan.cons || [],
-        logoUrl: plan.logo_url,
-      };
+    // Call Supabase Edge Function
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-insurance-quotes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ travelDetails }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch insurance quotes');
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Error fetching insurance quotes:', error);
     return [];
@@ -164,106 +97,102 @@ export const getPlanDetails = async (planId: string): Promise<InsurancePlan | nu
 };
 
 /**
+ * Process payment
+ */
+export const processPayment = async (
+  paymentDetails: {
+    amount: number;
+    currency: string;
+    paymentMethod: PaymentMethod;
+    cardNumber?: string;
+    cardExpiry?: string;
+    cardCvv?: string;
+    cardHolderName?: string;
+  }
+): Promise<{ success: boolean; reference?: string; error?: string }> => {
+  try {
+    // Get session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Call Supabase Edge Function
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/process-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(paymentDetails),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || 'Payment processing failed' 
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    };
+  }
+};
+
+/**
  * Purchase an insurance plan
  */
 export const purchaseInsurancePlan = async (
-  userId: string,
   planId: string,
   travelDetails: TravelDetails,
   price: number,
   paymentMethod: PaymentMethod,
   paymentReference?: string
-): Promise<{ success: boolean; policyId?: string; error?: string }> => {
-  // Start a Supabase transaction
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    return { success: false, error: 'User not authenticated' };
-  }
-
+): Promise<{ success: boolean; policyId?: string; referenceNumber?: string; error?: string }> => {
   try {
-    // Generate a unique reference number for the policy
-    const referenceNumber = `POL-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-    
-    // 1. Create the travel policy record
-    const { data: policyData, error: policyError } = await supabase
-      .from('travel_policies')
-      .insert({
-        user_id: userId,
-        plan_id: planId,
-        reference_number: referenceNumber,
-        coverage_type: travelDetails.coverageType,
-        origin_country: travelDetails.originCountry,
-        destination_country: travelDetails.destinationCountry,
-        trip_type: travelDetails.tripType,
-        start_date: travelDetails.startDate,
-        end_date: travelDetails.endDate,
-        cover_type: travelDetails.coverType,
-        total_price: price,
-        status: 'Active',
-        payment_status: 'Completed', // Assume payment is successful
-        payment_method: paymentMethod,
-        payment_reference: paymentReference,
-      })
-      .select('id')
-      .single();
-
-    if (policyError) throw policyError;
-    if (!policyData) throw new Error('Failed to create policy record');
-
-    const policyId = policyData.id;
-    
-    // 2. Create traveler records for each traveler
-    for (const traveler of travelDetails.travelers) {
-      const { error: travelerError } = await supabase
-        .from('traveler_info')
-        .insert({
-          policy_id: policyId,
-          first_name: traveler.firstName,
-          last_name: traveler.lastName,
-          date_of_birth: traveler.dateOfBirth,
-          email: traveler.email,
-          phone: traveler.phone,
-          emergency_contact: traveler.emergencyContact,
-          address: traveler.address,
-          passport_number: traveler.passport?.number,
-          passport_issue_date: traveler.passport?.issueDate,
-          passport_expiry_date: traveler.passport?.expiryDate,
-          passport_nationality: traveler.passport?.nationality,
-          beneficiary_name: traveler.beneficiary?.name,
-          beneficiary_relationship: traveler.beneficiary?.relationship,
-          beneficiary_contact: traveler.beneficiary?.contactDetails,
-        });
-
-      if (travelerError) throw travelerError;
-
-      // Handle document uploads if available
-      if (traveler.documents?.passport) {
-        // Upload passport document to Supabase storage
-        // This would be implemented in the UI component
-      }
-
-      if (traveler.documents?.visa) {
-        // Upload visa document to Supabase storage
-        // This would be implemented in the UI component
-      }
+    // Get session for authentication
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'User not authenticated' };
     }
-    
-    // 3. Create payment transaction record
-    const { error: paymentError } = await supabase
-      .from('payment_transactions')
-      .insert({
-        policy_id: policyId,
-        user_id: userId,
-        amount: price,
-        currency: 'USD', // Default currency
-        payment_method: paymentMethod,
-        status: 'Completed', // Assume payment is successful
-        reference: paymentReference || `PMT-${Date.now().toString(36).toUpperCase()}`,
-      });
 
-    if (paymentError) throw paymentError;
+    // Call Supabase Edge Function
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/purchase-plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        planId,
+        travelDetails,
+        price,
+        paymentMethod,
+        paymentReference
+      }),
+    });
+
+    const result = await response.json();
     
-    return { success: true, policyId };
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: result.error || 'Failed to purchase insurance plan' 
+      };
+    }
+
+    return {
+      success: true,
+      policyId: result.policyId,
+      referenceNumber: result.referenceNumber
+    };
   } catch (error) {
     console.error('Error purchasing insurance plan:', error);
     return { 
@@ -274,10 +203,9 @@ export const purchaseInsurancePlan = async (
 };
 
 /**
- * Upload user profile information
+ * Update user profile information
  */
 export const updateUserProfile = async (
-  userId: string, 
   profileData: { 
     firstName: string; 
     lastName: string; 
@@ -288,10 +216,15 @@ export const updateUserProfile = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Check if profile exists
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
     const { data: existingProfile, error: fetchError } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
@@ -308,7 +241,7 @@ export const updateUserProfile = async (
           address: profileData.address,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId);
+        .eq('user_id', user.id);
 
       if (updateError) throw updateError;
     } else {
@@ -316,7 +249,7 @@ export const updateUserProfile = async (
       const { error: insertError } = await supabase
         .from('user_profiles')
         .insert({
-          user_id: userId,
+          user_id: user.id,
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           email: profileData.email,
@@ -338,55 +271,15 @@ export const updateUserProfile = async (
 };
 
 /**
- * Process payment
- */
-export const processPayment = async (
-  paymentDetails: {
-    userId: string;
-    amount: number;
-    currency: string;
-    paymentMethod: PaymentMethod;
-    cardNumber?: string;
-    cardExpiry?: string;
-    cardCvv?: string;
-    cardHolderName?: string;
-  }
-): Promise<{ success: boolean; reference?: string; error?: string }> => {
-  try {
-    // In a real implementation, this would connect to a payment gateway
-    // For now, we'll simulate a successful payment
-    
-    // Generate a unique payment reference
-    const paymentReference = `TXN-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-    
-    // In real world, here you would call a payment gateway API
-    const isPaymentSuccessful = Math.random() > 0.1; // 90% success rate for simulation
-    
-    if (!isPaymentSuccessful) {
-      return { 
-        success: false, 
-        error: 'Payment failed. Please try again with a different payment method.' 
-      };
-    }
-    
-    return {
-      success: true,
-      reference: paymentReference
-    };
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'An unknown error occurred' 
-    };
-  }
-};
-
-/**
  * Get user's purchased policies
  */
-export const getUserPolicies = async (userId: string): Promise<any[]> => {
+export const getUserPolicies = async (): Promise<any[]> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
     const { data, error } = await supabase
       .from('travel_policies')
       .select(`
@@ -394,7 +287,7 @@ export const getUserPolicies = async (userId: string): Promise<any[]> => {
         insurance_plans(name, provider),
         traveler_info(*)
       `)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -410,16 +303,20 @@ export const getUserPolicies = async (userId: string): Promise<any[]> => {
  * Upload document and get URL
  */
 export const uploadDocument = async (
-  userId: string,
   policyId: string,
   travelerId: string,
   file: File,
   documentType: 'passport' | 'visa'
 ): Promise<{ success: boolean; url?: string; error?: string }> => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
     // Generate a unique filename
     const fileExtension = file.name.split('.').pop();
-    const fileName = `${userId}/${policyId}/${travelerId}/${documentType}_${Date.now()}.${fileExtension}`;
+    const fileName = `${policyId}/${travelerId}/${documentType}_${Date.now()}.${fileExtension}`;
     
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
