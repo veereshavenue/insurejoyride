@@ -2,7 +2,7 @@
 import React from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { MultiStepForm } from "@/components/ui/MultiStepForm";
+import MultiStepForm from "@/components/ui/MultiStepForm";
 
 const Index = () => {
   return (
