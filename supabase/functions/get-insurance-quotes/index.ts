@@ -16,11 +16,19 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
-    console.log('Initializing Supabase client with URL:', supabaseUrl ? 'URL provided' : 'URL missing');
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase configuration:', { 
+        urlProvided: !!supabaseUrl, 
+        keyProvided: !!supabaseAnonKey 
+      });
+      throw new Error('Missing Supabase configuration');
+    }
+    
+    console.log('Initializing Supabase client with URL:', supabaseUrl.substring(0, 15) + '...');
     
     const supabaseClient = createClient(
-      supabaseUrl ?? '',
-      supabaseAnonKey ?? '',
+      supabaseUrl,
+      supabaseAnonKey,
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
@@ -28,9 +36,21 @@ serve(async (req) => {
     const requestData = await req.json();
     const { travelDetails } = requestData;
     
-    console.log('Processing travel details:', JSON.stringify(travelDetails));
+    if (!travelDetails) {
+      console.error('No travel details provided in request');
+      throw new Error('Travel details are required');
+    }
+    
+    console.log('Processing travel details:', JSON.stringify({
+      coverageType: travelDetails.coverageType,
+      tripType: travelDetails.tripType,
+      startDate: travelDetails.startDate,
+      endDate: travelDetails.endDate,
+      travelers: travelDetails.travelers?.length
+    }));
     
     // Fetch all insurance plans with their benefits
+    console.log('Querying insurance_plans table for active plans');
     const { data: plansData, error: plansError } = await supabaseClient
       .from('insurance_plans')
       .select(`
@@ -59,7 +79,11 @@ serve(async (req) => {
     
     // Log the first plan for debugging purposes
     if (plansData.length > 0) {
-      console.log('First plan data sample:', JSON.stringify(plansData[0], null, 2));
+      console.log('First plan data sample (ID and name):', { 
+        id: plansData[0].id, 
+        name: plansData[0].name,
+        hasbenefits: Array.isArray(plansData[0].insurance_benefits) && plansData[0].insurance_benefits.length > 0
+      });
     }
     
     // Calculate trip days
@@ -125,7 +149,12 @@ serve(async (req) => {
     console.log(`Generated ${quotes.length} insurance quotes`);
     // Log the first quote for debugging
     if (quotes.length > 0) {
-      console.log('First quote sample:', JSON.stringify(quotes[0], null, 2));
+      console.log('First quote sample (ID, name, and price):', { 
+        id: quotes[0].id, 
+        name: quotes[0].name,
+        price: quotes[0].price,
+        benefits: quotes[0].benefits.length
+      });
     }
 
     return new Response(
@@ -138,7 +167,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in get-insurance-quotes edge function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error occurred' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 

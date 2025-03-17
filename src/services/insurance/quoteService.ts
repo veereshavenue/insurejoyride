@@ -1,34 +1,32 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { TravelDetails, InsurancePlan } from '@/types';
+import { InsurancePlan, TravelDetails } from '@/types';
 
 /**
- * Get insurance quotes based on travel details
+ * Fetch insurance quotes based on travel details
  */
 export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<InsurancePlan[]> => {
   try {
-    console.log('Fetching insurance quotes for:', JSON.stringify(travelDetails, null, 2));
+    console.log('Calling get-insurance-quotes edge function with travel details:', JSON.stringify(travelDetails, null, 2));
     
-    // Call Supabase Edge Function using the functions.invoke method
     const { data, error } = await supabase.functions.invoke('get-insurance-quotes', {
-      body: { travelDetails },
+      body: { travelDetails }
     });
-
+    
     if (error) {
-      console.error('Error invoking get-insurance-quotes function:', error);
+      console.error('Error from get-insurance-quotes edge function:', error);
       throw new Error(error.message || 'Failed to fetch insurance quotes');
     }
-
-    console.log('Received quotes data:', JSON.stringify(data, null, 2));
     
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      console.log('No quotes data returned from function');
+    if (!data) {
+      console.warn('No data returned from get-insurance-quotes edge function');
       return [];
     }
     
-    return data;
+    console.log(`Received ${data.length} quotes from edge function`);
+    return data as InsurancePlan[];
   } catch (error) {
-    console.error('Error fetching insurance quotes:', error);
+    console.error('Error in getInsuranceQuotes service:', error);
     throw error;
   }
 };

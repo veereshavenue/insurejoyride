@@ -1,5 +1,5 @@
 
-// Re-export all insurance service functions for easy importing
+// Export all insurance service modules
 export * from './quoteService';
 export * from './planService';
 export * from './paymentService';
