@@ -16,7 +16,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rbsmlwqhmmjwl
  */
 export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<InsurancePlan[]> => {
   try {
-    console.log('Fetching insurance quotes for:', travelDetails);
+    console.log('Fetching insurance quotes for:', JSON.stringify(travelDetails, null, 2));
     
     // Call Supabase Edge Function using the functions.invoke method
     const { data, error } = await supabase.functions.invoke('get-insurance-quotes', {
@@ -28,11 +28,17 @@ export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<
       throw new Error(error.message || 'Failed to fetch insurance quotes');
     }
 
-    console.log('Received quotes data:', data);
-    return data || [];
+    console.log('Received quotes data:', JSON.stringify(data, null, 2));
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.log('No quotes data returned from function');
+      return [];
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error fetching insurance quotes:', error);
-    return [];
+    throw error;
   }
 };
 

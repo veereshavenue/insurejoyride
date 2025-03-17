@@ -44,7 +44,23 @@ serve(async (req) => {
       throw plansError;
     }
     
-    console.log(`Successfully fetched ${plansData.length} insurance plans`);
+    console.log(`Successfully fetched ${plansData?.length || 0} insurance plans`);
+    
+    if (!plansData || plansData.length === 0) {
+      console.log('No insurance plans found in the database with is_active=true');
+      return new Response(
+        JSON.stringify([]),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+    
+    // Log the first plan for debugging purposes
+    if (plansData.length > 0) {
+      console.log('First plan data sample:', JSON.stringify(plansData[0], null, 2));
+    }
     
     // Calculate trip days
     const startDate = new Date(travelDetails.startDate);
@@ -94,7 +110,7 @@ serve(async (req) => {
         name: plan.name,
         provider: plan.provider,
         price: calculatedPrice,
-        benefits: plan.insurance_benefits,
+        benefits: plan.insurance_benefits || [],
         coverageLimit: plan.coverage_limit,
         rating: plan.rating,
         terms: plan.terms,
@@ -107,6 +123,10 @@ serve(async (req) => {
     });
     
     console.log(`Generated ${quotes.length} insurance quotes`);
+    // Log the first quote for debugging
+    if (quotes.length > 0) {
+      console.log('First quote sample:', JSON.stringify(quotes[0], null, 2));
+    }
 
     return new Response(
       JSON.stringify(quotes),

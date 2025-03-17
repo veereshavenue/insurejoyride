@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { differenceInDays } from "date-fns";
 import { InsurancePlan, TravelDetails } from "@/types";
@@ -5,7 +6,7 @@ import PlanCard from "@/components/ui/PlanCard";
 import PlanDetails from "@/components/ui/PlanDetails";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { ShieldCheck, Filter, Check, AlertCircle } from "lucide-react";
+import { ShieldCheck, Filter, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { getInsuranceQuotes, getPlanDetails } from "@/services/insuranceService";
 import { useQuery } from "@tanstack/react-query";
 
@@ -28,10 +29,15 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
   const { data: insurancePlans = [], isLoading, error, refetch } = useQuery({
     queryKey: ['insuranceQuotes', travelDetails],
     queryFn: async () => {
-      console.log('Fetching insurance quotes with travel details:', travelDetails);
-      const quotes = await getInsuranceQuotes(travelDetails);
-      console.log('Received insurance quotes:', quotes);
-      return quotes;
+      console.log('Fetching insurance quotes with travel details:', JSON.stringify(travelDetails, null, 2));
+      try {
+        const quotes = await getInsuranceQuotes(travelDetails);
+        console.log('Received insurance quotes:', JSON.stringify(quotes, null, 2));
+        return quotes;
+      } catch (err) {
+        console.error('Error in queryFn:', err);
+        throw err;
+      }
     },
     enabled: !!travelDetails.startDate && !!travelDetails.endDate,
     retry: 2,
@@ -57,7 +63,8 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
         description: "There was a problem loading insurance quotes. Please try again.",
         variant: "destructive"
       });
-    } else if (!isLoading && insurancePlans.length === 0) {
+      console.error('Query error:', error);
+    } else if (!isLoading && (!insurancePlans || insurancePlans.length === 0)) {
       toast({
         title: "No insurance plans found",
         description: "We couldn't find any insurance plans matching your criteria.",
@@ -128,12 +135,15 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
         <pre className="text-xs text-gray-500 bg-gray-100 p-2 rounded mb-4 max-w-xl mx-auto overflow-auto">
           {error instanceof Error ? error.message : 'Unknown error'}
         </pre>
-        <Button onClick={() => refetch()}>Try Again</Button>
+        <Button onClick={() => refetch()} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Try Again
+        </Button>
       </div>
     );
   }
 
-  if (insurancePlans.length === 0) {
+  if (!insurancePlans || insurancePlans.length === 0) {
     return (
       <div className="text-center py-12">
         <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
@@ -142,7 +152,8 @@ const InsuranceQuotesForm: React.FC<InsuranceQuotesFormProps> = ({
           <Button variant="outline" onClick={onBack}>
             Modify Search
           </Button>
-          <Button onClick={() => refetch()}>
+          <Button onClick={() => refetch()} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
             Retry Search
           </Button>
         </div>
