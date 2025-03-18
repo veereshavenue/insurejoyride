@@ -1,4 +1,3 @@
-
 package com.travelinsurance;
 
 import com.microsoft.azure.functions.*;
@@ -22,13 +21,14 @@ public class GetQuotesFunction {
 
     /**
      * This function listens at endpoint "/api/quotes".
+     * Updated to use ANONYMOUS authorization level to allow unauthenticated requests
      */
     @FunctionName("getQuotes")
     public HttpResponseMessage run(
             @HttpTrigger(
                 name = "req",
                 methods = {HttpMethod.POST},
-                authLevel = AuthorizationLevel.FUNCTION,
+                authLevel = AuthorizationLevel.ANONYMOUS,
                 route = "quotes")
                 HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {

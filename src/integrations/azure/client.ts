@@ -38,11 +38,19 @@ export const callAzureFunction = async <T>(
   // Add authorization header if authentication is required
   if (requiresAuth) {
     try {
-      const authResult = await getAuthToken();
-      headers['Authorization'] = `Bearer ${authResult.accessToken}`;
+      const account = getActiveAccount();
+      
+      // Only try to get auth token if there's an active account
+      if (account) {
+        const authResult = await getAuthToken();
+        headers['Authorization'] = `Bearer ${authResult.accessToken}`;
+      } else if (requiresAuth) {
+        // If auth is required but no account exists, throw error
+        throw new Error('No active account! Sign in before calling API.');
+      }
     } catch (error) {
       console.error('Authentication error:', error);
-      throw new Error('User authentication failed');
+      throw error;
     }
   }
 

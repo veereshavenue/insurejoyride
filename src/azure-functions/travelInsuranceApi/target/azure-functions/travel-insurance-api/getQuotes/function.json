@@ -1,3 +1,4 @@
+
 {
   "scriptFile" : "../travelInsuranceApi-1.0-SNAPSHOT.jar",
   "entryPoint" : "com.travelinsurance.GetQuotesFunction.run",
@@ -7,7 +8,7 @@
     "name" : "req",
     "route" : "quotes",
     "methods" : [ "POST" ],
-    "authLevel" : "FUNCTION"
+    "authLevel" : "ANONYMOUS"
   }, {
     "type" : "http",
     "direction" : "out",

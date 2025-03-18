@@ -1,4 +1,3 @@
-
 # Azure Deployment Guide for Travel Insurance Application
 
 This document provides comprehensive instructions for deploying the Travel Insurance application on Azure Cloud, with detailed examples for those new to Azure.
@@ -218,6 +217,18 @@ az functionapp config appsettings set \
 mvn azure-functions:deploy
 ```
 
+6. Configure Authentication Settings (Optional for protected endpoints):
+
+   Some endpoints like getting quotes are configured to allow anonymous access so that users can browse quotes without signing in. For other endpoints that require authentication:
+
+   - Go to Azure Portal > Your Function App > Authentication
+   - Click "Add identity provider"
+   - Select "Microsoft" as the identity provider
+   - Under App registration type, select "Pick an existing app registration in this directory"
+   - Select your Azure AD B2C app registration 
+   - For Issuer URL, enter: `https://your-tenant-name.b2clogin.com/your-tenant-name.onmicrosoft.com/B2C_1_signupsignin/v2.0`
+   - Click "Add"
+
 ## Step 5: Configure CORS for Azure Functions
 
 ```bash
@@ -298,6 +309,25 @@ az functionapp cors add \
 6. **VITE_AZURE_FUNCTION_URL**: The base URL for your deployed Azure Functions.
    - Example: `https://travel-insurance-api.azurewebsites.net/api`
    - Where to find: Azure Portal > Your Function App > Overview > URL
+   - This is the endpoint that your frontend will use to make API calls
+
+7. **Additional Environment Variables for Production**:
+   
+   When deploying to production, you need to ensure all these environment variables are correctly configured. Here's a checklist:
+   
+   | Environment Variable | Example Value | Description |
+   |----------------------|---------------|-------------|
+   | VITE_AZURE_AD_CLIENT_ID | 12345678-1234-1234-1234-1234567890ab | Your Azure AD B2C app registration client ID |
+   | VITE_AZURE_AD_AUTHORITY | https://travelinsurance.b2clogin.com/travelinsurance.onmicrosoft.com/B2C_1_signupsignin | Your Azure AD B2C policy authority URL |
+   | VITE_AZURE_AD_REDIRECT_URI | https://travel-insurance-app.azurestaticapps.net | Your frontend application URL |
+   | VITE_AZURE_AD_KNOWN_AUTHORITY | travelinsurance.b2clogin.com | Your B2C tenant's domain |
+   | VITE_AZURE_AD_SCOPE | https://travelinsurance.onmicrosoft.com/api/user_impersonation | The scope for API access |
+   | VITE_AZURE_FUNCTION_URL | https://travel-insurance-api.azurewebsites.net/api | Your Azure Function app's API URL |
+   | MYSQL_CONNECTION_STRING | jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true&serverTimezone=UTC | Your MySQL connection string |
+   | MYSQL_USER | adminuser@travel-insurance-mysql | Your MySQL admin username |
+   | MYSQL_PASSWORD | YourStrongPassword123! | Your MySQL admin password |
+
+   All these environment variables must be set correctly for the application to work properly. You set the VITE_* variables in your frontend Static Web App's configuration, and the others in your Function App's configuration.
 
 ## Step 7: Configure GitHub Actions for CI/CD
 
@@ -394,3 +424,32 @@ To avoid unexpected costs:
 3. Configure SSL/TLS for all services
 4. Set up Azure Security Center for monitoring
 5. Regularly rotate database passwords and API keys
+
+## Troubleshooting Authentication Errors
+
+### "No active account! Sign in before calling API" Error
+
+1. **Check Function Authorization Level**:
+   - Go to Azure Portal > Your Function App > Functions > Your Function > Integration
+   - Ensure the `authLevel` is set to `ANONYMOUS` in the Java code.
+   - The function.json file should have `"authLevel" : "ANONYMOUS"`.
+
+2. **Check API Call Configuration**:
+   - Ensure your frontend API call specifies `requiresAuth: false` when calling `callAzureFunction`.
+
+3. **Verify App Registration**:
+   - Ensure your app registration in Azure AD B2C is properly configured.
+
+4. **Check Browser Console**:
+   - Review the browser console for detailed error messages.
+
+### Unable to Get Authentication Token
+
+1. **Check Environment Variables**:
+   - Ensure all Azure AD B2C environment variables are correctly set.
+
+2. **Verify App Registration**:
+   - Ensure your app registration in Azure AD B2C is properly configured.
+
+3. **Check Browser Console**:
+   - Review the browser console for detailed error messages.
