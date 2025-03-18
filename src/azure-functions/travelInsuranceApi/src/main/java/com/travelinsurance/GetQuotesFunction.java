@@ -19,74 +19,39 @@ public class GetQuotesFunction {
     private static final String DB_USER = System.getenv("MYSQL_USER");
     private static final String DB_PASSWORD = System.getenv("MYSQL_PASSWORD");
 
-    /**
-     * This function listens at endpoint "/api/quotes".
-     * Updated to use ANONYMOUS authorization level to allow unauthenticated requests
-     * and support OPTIONS for CORS preflight
-     */
     @FunctionName("getQuotes")
     public HttpResponseMessage run(
             @HttpTrigger(
                 name = "req",
                 methods = {HttpMethod.POST, HttpMethod.OPTIONS},
-                authLevel = AuthorizationLevel.ANONYMOUS,
-                route = "quotes")
+                authLevel = AuthorizationLevel.ANONYMOUS)
                 HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
         
         context.getLogger().info("Java HTTP trigger processed a request for insurance quotes.");
-        context.getLogger().info("Request method: " + request.getHttpMethod().name());
-        context.getLogger().info("Request URL: " + request.getUri().toString());
-        
-        // Define CORS headers
-        Map<String, String> corsHeaders = new HashMap<>();
-        corsHeaders.put("Access-Control-Allow-Origin", "*");
-        corsHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        corsHeaders.put("Access-Control-Allow-Headers", "Content-Type, Authorization, x-client-info, apikey, x-requested-with, origin, accept");
-        corsHeaders.put("Access-Control-Max-Age", "86400");
-        
-        // Log all request headers for debugging
-        context.getLogger().info("=== REQUEST HEADERS ===");
-        for (Map.Entry<String, String> header : request.getHeaders().entrySet()) {
-            context.getLogger().info(header.getKey() + ": " + header.getValue());
-        }
         
         // Handle OPTIONS request for CORS preflight
         if (request.getHttpMethod() == HttpMethod.OPTIONS) {
-            context.getLogger().info("Handling OPTIONS request for CORS preflight");
-            
-            HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.OK);
-            // Add each CORS header individually
-            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
-            }
-            
-            HttpResponseMessage responseMessage = responseBuilder.build();
-            context.getLogger().info("OPTIONS response sent with CORS headers");
-            return responseMessage;
-        }
-
-        // Parse request body
-        String requestBody = request.getBody().orElse("");
-        context.getLogger().info("Request body: " + requestBody);
-        
-        if (requestBody.isEmpty()) {
-            context.getLogger().warning("Empty request body received");
-            
-            HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.BAD_REQUEST)
-                .body("Please provide travel details in the request body");
-                
-            // Add each CORS header individually
-            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
-            }
-            
-            HttpResponseMessage responseMessage = responseBuilder.build();
-            context.getLogger().info("Bad request response sent");
-            return responseMessage;
+            return request.createResponseBuilder(HttpStatus.OK)
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "*")
+                .header("Access-Control-Max-Age", "86400")
+                .build();
         }
 
         try {
+            // Parse request body
+            String requestBody = request.getBody().orElse("");
+            if (requestBody.isEmpty()) {
+                return request.createResponseBuilder(HttpStatus.BAD_REQUEST)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "*")
+                    .body("Please provide travel details in the request body")
+                    .build();
+            }
+
             // Parse the request JSON
             JSONObject requestJson = new JSONObject(requestBody);
             context.getLogger().info("Parsed JSON: " + requestJson.toString());
@@ -169,46 +134,23 @@ public class GetQuotesFunction {
             }
             
             context.getLogger().info("Successfully processed quotes. Returning " + calculatedPlans.size() + " plans.");
-            
-            // Create the response with the required CORS headers
-            HttpResponseMessage.Builder responseBuilder = request
-                .createResponseBuilder(HttpStatus.OK)
+
+            return request.createResponseBuilder(HttpStatus.OK)
                 .header("Content-Type", "application/json")
-                .body(resultArray.toString());
-                
-            // Add each CORS header individually
-            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
-            }
-            
-            HttpResponseMessage responseMessage = responseBuilder.build();
-            context.getLogger().info("Success response sent with quotes");
-            
-            // Log all response headers for debugging
-            context.getLogger().info("=== RESPONSE HEADERS ===");
-            // Log the headers we added
-            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                context.getLogger().info(header.getKey() + ": " + header.getValue() + " (added to response)");
-            }
-            
-            return responseMessage;
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "*")
+                .body(resultArray.toString())
+                .build();
                     
         } catch (Exception e) {
             context.getLogger().severe("Error processing request: " + e.getMessage());
-            e.printStackTrace();
-            
-            HttpResponseMessage.Builder responseBuilder = request
-                .createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error processing request: " + e.getMessage());
-                
-            // Add each CORS header individually
-            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
-            }
-            
-            HttpResponseMessage responseMessage = responseBuilder.build();
-            context.getLogger().info("Error response sent");
-            return responseMessage;
+            return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                .header("Access-Control-Allow-Headers", "*")
+                .body("Error processing request: " + e.getMessage())
+                .build();
         }
     }
 
