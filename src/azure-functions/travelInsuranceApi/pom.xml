@@ -77,9 +77,9 @@
                 <version>${azure.functions.maven.plugin.version}</version>
                 <configuration>
                     <appName>${functionAppName}</appName>
-                    <resourceGroup>travel-insurance-rg</resourceGroup>
+                    <resourceGroup>Hackthon-M</resourceGroup>
                     <appServicePlanName>travel-insurance-plan</appServicePlanName>
-                    <region>eastus</region>
+                    <region>westus</region>
                     <runtime>
                         <os>linux</os>
                         <javaVersion>11</javaVersion>
@@ -89,6 +89,10 @@
                             <name>FUNCTIONS_EXTENSION_VERSION</name>
                             <value>~4</value>
                         </property>
+                        <property>
+                            <name>MYSQL_CONNECTION_STRING</name>
+                            <value>jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/flexibleserverdb?useSSL=true</value>
+                        </property>                        
                     </appSettings>
                 </configuration>
                 <executions>
