@@ -109,9 +109,16 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering>
                 <includes>
                     <include>**/*.json</include>
+                </includes>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>host.json</include>
                 </includes>
                 <targetPath>${project.build.directory}/azure-functions/${functionAppName}</targetPath>
             </resource>
