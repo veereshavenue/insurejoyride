@@ -6,18 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { TravelDetails } from '@/types';
 
 const ApiTest = () => {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestData, setRequestData] = useState({
+  const [requestData, setRequestData] = useState<TravelDetails>({
     coverageType: 'Worldwide',
+    originCountry: 'United States',
+    destinationCountry: 'France',
     tripType: 'Single Trip',
     startDate: '2023-12-01',
     endDate: '2023-12-15',
     coverType: 'Individual',
-    travelers: [{ age: 35 }]
+    travelers: [{ 
+      id: '1',
+      firstName: 'Test',
+      lastName: 'User',
+      dateOfBirth: '1988-01-01',
+      age: 35 
+    }]
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -28,8 +37,19 @@ const ApiTest = () => {
     const age = parseInt(value, 10) || 30;
     setRequestData(prev => ({
       ...prev,
-      travelers: [{ age }]
+      travelers: [{ 
+        ...prev.travelers[0],
+        age 
+      }]
     }));
+  };
+
+  const handleOriginCountryChange = (value: string) => {
+    setRequestData(prev => ({ ...prev, originCountry: value }));
+  };
+
+  const handleDestinationCountryChange = (value: string) => {
+    setRequestData(prev => ({ ...prev, destinationCountry: value }));
   };
 
   const testDirectApi = async () => {
@@ -115,6 +135,24 @@ const ApiTest = () => {
                   <SelectItem value="Schengen">Schengen</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="originCountry">Origin Country</Label>
+              <Input 
+                id="originCountry" 
+                value={requestData.originCountry}
+                onChange={(e) => handleOriginCountryChange(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="destinationCountry">Destination Country</Label>
+              <Input 
+                id="destinationCountry" 
+                value={requestData.destinationCountry}
+                onChange={(e) => handleDestinationCountryChange(e.target.value)}
+              />
             </div>
             
             <div className="space-y-2">
