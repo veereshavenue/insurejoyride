@@ -8,6 +8,7 @@ import { initializeAuth } from '@/integrations/azure/client';
 import Index from './pages/Index';
 import Auth from './pages/Auth';
 import NotFound from './pages/NotFound';
+import ApiTest from './pages/ApiTest';
 
 // Initialize auth on app startup
 initializeAuth();
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/api-test" element={<ApiTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Router>
