@@ -1,76 +1,150 @@
 
 # Azure Deployment Guide for Travel Insurance Application
 
-This document provides comprehensive instructions for deploying the entire Travel Insurance application (front-end, back-end, and database) on Azure Cloud.
+This document provides comprehensive instructions for deploying the Travel Insurance application on Azure Cloud, with detailed examples for those new to Azure.
 
 ## Prerequisites
 
-- Azure account with active subscription
-- Azure CLI installed
+- Azure account with active subscription (Sign up at [portal.azure.com](https://portal.azure.com) if you don't have one)
+- Azure CLI installed ([Download here](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli))
 - GitHub account for source code repository
 - Node.js and npm installed for front-end development
 - Maven installed for Java backend development
 
-## Infrastructure Components
+## Step 1: Create an Azure Resource Group
 
-1. **Front-end**: Azure Static Web Apps
-2. **Back-end APIs**: Azure Functions (Java)
-3. **Database**: Azure MySQL
-4. **Authentication**: Azure AD B2C
+A resource group is a container that holds related resources. Start by creating one for all your project resources:
 
-## Step 1: Set Up Azure MySQL Database
+```bash
+# Login to Azure CLI
+az login
+
+# Create a resource group
+az group create --name travel-insurance-rg --location eastus
+```
+
+## Step 2: Set Up Azure MySQL Database
 
 1. Create an Azure MySQL database:
 
 ```bash
-az mysql server create --resource-group travel-insurance-rg --name travel-insurance-mysql --location eastus --admin-user adminuser --admin-password <your-password> --sku-name GP_Gen5_2
+# Create MySQL server
+az mysql server create \
+  --resource-group travel-insurance-rg \
+  --name travel-insurance-mysql \
+  --location eastus \
+  --admin-user adminuser \
+  --admin-password YourStrongPassword123! \
+  --sku-name GP_Gen5_2
+
+# Note: Replace 'YourStrongPassword123!' with a strong password
 ```
 
 2. Configure firewall rules to allow Azure services:
 
 ```bash
-az mysql server firewall-rule create --resource-group travel-insurance-rg --server travel-insurance-mysql --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+# Allow access from Azure services
+az mysql server firewall-rule create \
+  --resource-group travel-insurance-rg \
+  --server travel-insurance-mysql \
+  --name AllowAzureServices \
+  --start-ip-address 0.0.0.0 \
+  --end-ip-address 0.0.0.0
+
+# Allow access from your development machine (optional)
+az mysql server firewall-rule create \
+  --resource-group travel-insurance-rg \
+  --server travel-insurance-mysql \
+  --name AllowMyIP \
+  --start-ip-address <your-ip-address> \
+  --end-ip-address <your-ip-address>
 ```
 
-3. Create the database schema:
+3. Create the database:
 
 ```bash
-mysql -h travel-insurance-mysql.mysql.database.azure.com -u adminuser@travel-insurance-mysql -p
+# Create a database
+az mysql db create \
+  --resource-group travel-insurance-rg \
+  --server-name travel-insurance-mysql \
+  --name insurancedb
 ```
 
-4. Execute the schema creation script from `src/db/mysql_migration.sql`
+4. Connect to the database and execute the schema creation script:
 
-## Step 2: Set Up Azure AD B2C for Authentication
+```bash
+# Connect to MySQL (you might need MySQL client installed)
+mysql -h travel-insurance-mysql.mysql.database.azure.com -u adminuser@travel-insurance-mysql -p
 
-1. Create an Azure AD B2C tenant:
-   - Go to Azure Portal > Azure AD B2C
-   - Create a new tenant or use an existing one
+# Once connected, execute the schema script from src/db/mysql_migration.sql
+```
 
-2. Register your application:
-   - Navigate to App registrations
-   - Click "New registration"
-   - Enter a name for your application
-   - For Redirect URI, enter your frontend URL (e.g., https://your-static-web-app.azurestaticapps.net)
+## Step 3: Set Up Azure AD B2C for Authentication
+
+### Create Azure AD B2C Tenant
+
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Search for "Azure AD B2C" and select it
+3. Click "Create a new Azure AD B2C Tenant"
+4. Fill in the required information:
+   - Organization name (e.g., "TravelInsurance")
+   - Initial domain name (e.g., "travelinsurance" - this will become travelinsurance.onmicrosoft.com)
+   - Country/Region (select your location)
+   - Resource group (use the existing travel-insurance-rg)
+5. Click "Review + create" and then "Create"
+
+### Register Your Application
+
+1. In your new B2C tenant, go to "App registrations"
+2. Click "New registration"
+3. Enter application details:
+   - Name: "Travel Insurance App"
+   - Supported account types: "Accounts in any identity provider or organizational directory"
+   - Redirect URI: Select "Web" and enter your frontend URL (e.g., https://travel-insurance-app.azurestaticapps.net)
    - Click "Register"
+4. Note the "Application (client) ID" - you'll need this later
 
-3. Configure user flows:
-   - Navigate to User flows
-   - Create sign-up and sign-in flow
-   - Create password reset flow
-   - Customize the user attributes as needed
+### Configure User Flows
 
-4. Configure identity providers:
-   - Go to Identity providers
-   - Enable Email/Password authentication
-   - To enable Google auth, select "Google" and enter your Google OAuth credentials
+1. Go to "Azure AD B2C" > "User flows"
+2. Click "New user flow"
+3. Select "Sign up and sign in"
+4. Select "Recommended" and click "Create"
+5. Provide a name (e.g., "B2C_1_signupsignin")
+6. Under "Identity providers", select "Email signup"
+7. Under "User attributes", select:
+   - Email Address
+   - Given Name
+   - Display Name
+   - Surname
+8. Click "Create"
 
-5. Note your B2C tenant details:
-   - Tenant name
-   - Application (client) ID
-   - User flow names
-   - These will be used in your application configuration
+### Configure Google Authentication (Optional)
 
-## Step 3: Deploy Azure Functions (Java Backend)
+1. First, create OAuth credentials in Google Cloud Console:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or use an existing one
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Application type: "Web application"
+   - Name: "Travel Insurance App"
+   - Authorized redirect URIs: Add "https://your-b2c-tenant.b2clogin.com/your-b2c-tenant.onmicrosoft.com/oauth2/authresp"
+   - Note the Client ID and Client Secret
+
+2. In Azure AD B2C:
+   - Go to "Identity providers"
+   - Select "Google"
+   - Name: "Google"
+   - Client ID: (paste from Google)
+   - Client secret: (paste from Google)
+   - Click "Save"
+
+3. Update your user flow to include Google:
+   - Go to your user flow (B2C_1_signupsignin)
+   - Under "Identity providers", select both "Email signup" and "Google"
+   - Click "Save"
+
+## Step 4: Deploy Azure Functions (Java Backend)
 
 1. Navigate to the Azure Functions project:
 
@@ -84,242 +158,239 @@ cd src/azure-functions/travelInsuranceApi
 mvn clean package
 ```
 
-3. Deploy to Azure:
+3. Create an Azure Function App:
+
+```bash
+# Create storage account for Function App
+az storage account create \
+  --name travelinsurancestorage \
+  --resource-group travel-insurance-rg \
+  --location eastus \
+  --sku Standard_LRS
+
+# Create Function App
+az functionapp create \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --storage-account travelinsurancestorage \
+  --runtime java \
+  --runtime-version 11 \
+  --functions-version 4 \
+  --os-type Linux \
+  --consumption-plan-location eastus
+```
+
+4. Configure environment variables:
+
+```bash
+# MySQL connection string
+az functionapp config appsettings set \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --settings MYSQL_CONNECTION_STRING="jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true&serverTimezone=UTC"
+
+# MySQL credentials
+az functionapp config appsettings set \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --settings MYSQL_USER="adminuser@travel-insurance-mysql"
+
+az functionapp config appsettings set \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --settings MYSQL_PASSWORD="YourStrongPassword123!"
+
+# Azure AD B2C settings
+az functionapp config appsettings set \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --settings AZURE_AD_B2C_TENANT="your-tenant-name.onmicrosoft.com"
+
+az functionapp config appsettings set \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --settings AZURE_AD_B2C_CLIENT_ID="your-application-client-id"
+```
+
+5. Deploy the functions:
 
 ```bash
 mvn azure-functions:deploy
 ```
 
-4. Configure environment variables in Azure Portal:
-   - Go to your Function App > Configuration
-   - Add these application settings:
-     - `MYSQL_CONNECTION_STRING`: jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true
-     - `MYSQL_USER`: adminuser@travel-insurance-mysql
-     - `MYSQL_PASSWORD`: <your-password>
-     - `AZURE_AD_B2C_TENANT`: Your Azure AD B2C tenant name
-     - `AZURE_AD_B2C_CLIENT_ID`: Your application client ID
-     - `AZURE_AD_B2C_CLIENT_SECRET`: Your application client secret
+## Step 5: Configure CORS for Azure Functions
 
-## Step 4: Configure CORS for Azure Functions
+```bash
+# Configure CORS for Azure Functions
+az functionapp cors add \
+  --name travel-insurance-api \
+  --resource-group travel-insurance-rg \
+  --allowed-origins "https://travel-insurance-app.azurestaticapps.net"
+```
 
-1. Add CORS configuration to allow requests from your frontend:
-   - Go to your Function App > CORS
-   - Add your frontend URL (e.g., https://your-static-web-app.azurestaticapps.net)
-   - Check "Enable Access-Control-Allow-Credentials"
-   - Click "Save"
-
-## Step 5: Deploy Front-end to Azure Static Web Apps
+## Step 6: Deploy Front-end to Azure Static Web Apps
 
 1. Create a GitHub repository and push your code
 
-2. Create an Azure Static Web App:
+2. Create an Azure Static Web App through the Azure Portal:
+   - Go to [Azure Portal](https://portal.azure.com)
+   - Search for "Static Web Apps" and select it
+   - Click "Create"
+   - Fill in the details:
+     - Subscription: Your subscription
+     - Resource Group: travel-insurance-rg
+     - Name: travel-insurance-app
+     - Region: Select nearest region
+     - SKU: Free
+     - Source: GitHub
+     - Organization: Your GitHub organization
+     - Repository: Your repository
+     - Branch: main
+     - Build Presets: React
+     - App location: /
+     - Api location: (leave empty)
+     - Output location: dist
+   - Click "Review + create" and then "Create"
 
-```bash
-az staticwebapp create --name travel-insurance-app --resource-group travel-insurance-rg --source https://github.com/yourusername/your-repo --branch main --app-location "/" --output-location "dist" --login-with-github
-```
+3. After deployment, configure the environment variables in the Azure Portal:
+   - Go to your Static Web App > "Configuration"
+   - Add the following application settings one by one:
 
-3. Configure environment variables in Azure Portal:
-   - Go to your Static Web App > Configuration
-   - Add these application settings:
-     - `VITE_AZURE_AD_CLIENT_ID`: Your Azure AD B2C application client ID
-     - `VITE_AZURE_AD_AUTHORITY`: Your Azure AD B2C authority URL
-     - `VITE_AZURE_AD_REDIRECT_URI`: Your frontend URL
-     - `VITE_AZURE_AD_KNOWN_AUTHORITY`: Your Azure AD B2C tenant name
-     - `VITE_AZURE_AD_SCOPE`: API scope for your application
-     - `VITE_AZURE_FUNCTION_URL`: URL of your Azure Functions
+   | Name | Value | Example |
+   |------|-------|---------|
+   | VITE_AZURE_AD_CLIENT_ID | Your Azure AD B2C application client ID | 12345678-1234-1234-1234-1234567890ab |
+   | VITE_AZURE_AD_AUTHORITY | Your Azure AD B2C authority URL | https://travelinsurance.b2clogin.com/travelinsurance.onmicrosoft.com/B2C_1_signupsignin |
+   | VITE_AZURE_AD_REDIRECT_URI | Your frontend URL | https://travel-insurance-app.azurestaticapps.net |
+   | VITE_AZURE_AD_KNOWN_AUTHORITY | Your B2C tenant login domain | travelinsurance.b2clogin.com |
+   | VITE_AZURE_AD_SCOPE | Your API scope | https://travelinsurance.onmicrosoft.com/api/user_impersonation |
+   | VITE_AZURE_FUNCTION_URL | URL of your Azure Functions | https://travel-insurance-api.azurewebsites.net/api |
 
-## Step 6: Configure GitHub Actions for CI/CD
+   - Click "Save" after adding all environment variables
 
-1. Create a GitHub workflow file at `.github/workflows/azure-static-web-apps.yml`:
+### Environment Variables Explained
 
-```yaml
-name: Azure Static Web App CI/CD
+#### Azure AD B2C Variables
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
+1. **VITE_AZURE_AD_CLIENT_ID**: The Application (client) ID of your registered app in Azure AD B2C.
+   - Example: `12345678-1234-1234-1234-1234567890ab`
+   - Where to find: Azure Portal > Azure AD B2C > App registrations > Your app > Overview > Application (client) ID
 
-jobs:
-  build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
-    runs-on: ubuntu-latest
-    name: Build and Deploy Job
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          app_location: "/"
-          api_location: ""
-          output_location: "dist"
-          app_build_command: "npm run build"
-        env:
-          VITE_AZURE_AD_CLIENT_ID: ${{ secrets.VITE_AZURE_AD_CLIENT_ID }}
-          VITE_AZURE_AD_AUTHORITY: ${{ secrets.VITE_AZURE_AD_AUTHORITY }}
-          VITE_AZURE_AD_REDIRECT_URI: ${{ secrets.VITE_AZURE_AD_REDIRECT_URI }}
-          VITE_AZURE_AD_KNOWN_AUTHORITY: ${{ secrets.VITE_AZURE_AD_KNOWN_AUTHORITY }}
-          VITE_AZURE_AD_SCOPE: ${{ secrets.VITE_AZURE_AD_SCOPE }}
-          VITE_AZURE_FUNCTION_URL: ${{ secrets.VITE_AZURE_FUNCTION_URL }}
+2. **VITE_AZURE_AD_AUTHORITY**: The full authority URL, including your tenant name and policy name.
+   - Format: `https://{tenant}.b2clogin.com/{tenant}.onmicrosoft.com/{policy}`
+   - Example: `https://travelinsurance.b2clogin.com/travelinsurance.onmicrosoft.com/B2C_1_signupsignin`
+   - Where to find: Azure Portal > Azure AD B2C > User flows > Click on your flow
 
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: "close"
-```
+3. **VITE_AZURE_AD_REDIRECT_URI**: The URL where users will be redirected after authentication.
+   - Example: `https://travel-insurance-app.azurestaticapps.net`
+   - This should match the redirect URI configured in your app registration
 
-2. Add the necessary secrets to your GitHub repository:
-   - `AZURE_STATIC_WEB_APPS_API_TOKEN`: From Azure Static Web App deployment
-   - `VITE_AZURE_AD_CLIENT_ID`: Your Azure AD B2C application client ID
-   - `VITE_AZURE_AD_AUTHORITY`: Your Azure AD B2C authority URL
-   - `VITE_AZURE_AD_REDIRECT_URI`: Your frontend URL
-   - `VITE_AZURE_AD_KNOWN_AUTHORITY`: Your Azure AD B2C tenant name
-   - `VITE_AZURE_AD_SCOPE`: API scope for your application
-   - `VITE_AZURE_FUNCTION_URL`: URL of your Azure Functions
+4. **VITE_AZURE_AD_KNOWN_AUTHORITY**: Just the domain portion of your B2C tenant.
+   - Example: `travelinsurance.b2clogin.com`
+   - This is the first part of your authority URL
 
-## Step 7: CI/CD for Azure Functions
+5. **VITE_AZURE_AD_SCOPE**: The API permission scope you defined for your application.
+   - Format: `https://{tenant}.onmicrosoft.com/{api-name}/{scope-name}`
+   - Example: `https://travelinsurance.onmicrosoft.com/api/user_impersonation`
+   - Where to find/create: Azure Portal > Azure AD B2C > App registrations > Your API app > Expose an API
 
-1. Create a GitHub workflow file at `.github/workflows/azure-functions.yml`:
+#### Azure Function Variable
 
-```yaml
-name: Deploy Java Azure Functions
+6. **VITE_AZURE_FUNCTION_URL**: The base URL for your deployed Azure Functions.
+   - Example: `https://travel-insurance-api.azurewebsites.net/api`
+   - Where to find: Azure Portal > Your Function App > Overview > URL
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/azure-functions/**'
+## Step 7: Configure GitHub Actions for CI/CD
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+GitHub Actions is automatically configured when you create an Azure Static Web App, but you need to add secrets for environment variables:
 
-    - name: Set up Java
-      uses: actions/setup-java@v1
-      with:
-        java-version: '11'
+1. In your GitHub repository, go to Settings > Secrets and variables > Actions
+2. Add the following secrets:
+   - `VITE_AZURE_AD_CLIENT_ID`
+   - `VITE_AZURE_AD_AUTHORITY`
+   - `VITE_AZURE_AD_REDIRECT_URI`
+   - `VITE_AZURE_AD_KNOWN_AUTHORITY`
+   - `VITE_AZURE_AD_SCOPE`
+   - `VITE_AZURE_FUNCTION_URL`
 
-    - name: Build with Maven
-      run: |
-        cd src/azure-functions/travelInsuranceApi
-        mvn clean package
+3. The GitHub workflow file is already created at `.github/workflows/azure-static-web-apps-*.yml`
 
-    - name: Deploy to Azure Functions
-      uses: Azure/functions-action@v1
-      with:
-        app-name: travel-insurance-api
-        package: src/azure-functions/travelInsuranceApi/target/azure-functions/travel-insurance-api
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-```
+## Verifying Your Deployment
 
-2. Add the necessary secret to your GitHub repository:
-   - `AZURE_FUNCTIONAPP_PUBLISH_PROFILE`: From Azure Function App > Get publish profile
+1. **Test the Frontend**
+   - Visit your Azure Static Web App URL (find it in the Azure Portal > Your Static Web App > Overview)
+   - You should see the travel insurance application
+   - Try to browse insurance quotes without logging in (this should work)
+   - Try to purchase a plan (this should prompt for login)
 
-## Step 8: Update Java Backend Functions Implementation
+2. **Test Authentication**
+   - Try to log in with email
+   - If configured, try to log in with Google
+   - Verify that you can access protected routes after login
 
-The Java backend implementation provides the following endpoints:
+3. **Test API Functions**
+   - Browse insurance quotes to verify API connectivity
+   - Try to purchase a plan after logging in
 
-1. **GET /api/quotes**: Get insurance quotes based on travel details
-2. **GET /api/plans/{id}**: Get plan details by ID
-3. **POST /api/payment/process**: Process payment for a plan
-4. **POST /api/purchase**: Purchase a plan
-5. **POST /api/documents/upload**: Upload travel documents
-6. **GET /api/user/profile**: Get user profile
-7. **POST /api/user/profile**: Update user profile
+## Troubleshooting Common Issues
 
-Each function is implemented in a separate Java class in the `src/azure-functions/travelInsuranceApi/src/main/java/com/travelinsurance/` directory.
+### Azure AD B2C Issues
 
-## Step 9: Configure Azure AD B2C Token Validation in Azure Functions
+1. **Redirect URI Errors**:
+   - Check that the redirect URI in your app registration matches the one in your frontend config
+   - Example: If your app is deployed at `https://lively-smoke-0eae5a610.azurestaticapps.net`, your redirect URI should be set to this
 
-In your Java code, add a token validation filter to ensure the Azure AD B2C tokens are validated:
+2. **CORS Errors**:
+   - If you see CORS errors in the browser console:
+   ```bash
+   az functionapp cors add --name travel-insurance-api --resource-group travel-insurance-rg --allowed-origins "https://your-frontend-url"
+   ```
 
-```java
-// Example token validation in a function
-@FunctionName("secureFunction")
-public HttpResponseMessage run(
-        @HttpTrigger(name = "req", 
-                    methods = {HttpMethod.GET}, 
-                    authLevel = AuthorizationLevel.ANONYMOUS) 
-                    HttpRequestMessage<Optional<String>> request,
-        final ExecutionContext context) {
-    
-    // Get the Authorization header
-    String authHeader = request.getHeaders().get("Authorization");
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-        return request.createResponseBuilder(HttpStatus.UNAUTHORIZED)
-                .body("Authorization header is required")
-                .build();
-    }
-    
-    String token = authHeader.substring("Bearer ".length());
-    
-    // Validate the token using MSAL or JWT library
-    if (!validateToken(token)) {
-        return request.createResponseBuilder(HttpStatus.UNAUTHORIZED)
-                .body("Invalid token")
-                .build();
-    }
-    
-    // Process the request
-    // ...
-}
-```
+3. **Authentication Failures**:
+   - Check the browser console for detailed error messages
+   - Verify all B2C environment variables are correct
+   - Ensure your user flow is published and active
 
-## Testing and Monitoring
+### Database Connection Issues
 
-1. **Test the Deployment**:
-   - Visit your Static Web App URL
-   - Test the API endpoints
-   - Test the authentication flow
-   - Verify database connections
+If your Azure Functions can't connect to the database:
 
-2. **Set Up Monitoring**:
-   - Enable Application Insights for both Static Web App and Functions
-   - Set up alerts for performance and availability
+1. Check MySQL firewall rules:
+   ```bash
+   az mysql server firewall-rule list --resource-group travel-insurance-rg --server-name travel-insurance-mysql
+   ```
 
-3. **Logs and Diagnostics**:
-   - Functions logs: Azure Portal > Your Function App > Functions > Monitor
-   - Static Web App logs: Azure Portal > Your Static Web App > Monitoring > Logs
-   - AD B2C logs: Azure Portal > Azure AD B2C > Audit logs
+2. Verify connection string format:
+   ```
+   jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/insurancedb?useSSL=true&serverTimezone=UTC
+   ```
 
-## Troubleshooting
+3. Check MySQL credentials in Function App settings
 
-1. **Authentication Issues**:
-   - Verify Azure AD B2C configuration
-   - Check redirect URIs
-   - Review authentication logs in Azure AD B2C
+### Function App Errors
 
-2. **API Connection Issues**:
-   - Verify CORS settings
-   - Check network requests in browser dev tools
-   - Ensure environment variables are set correctly
+1. Check Function App logs:
+   - Go to Azure Portal > Your Function App > Functions
+   - Click on a function
+   - Go to the "Monitor" tab
+   - Check recent invocations and logs
 
-3. **Database Connection Issues**:
-   - Verify firewall rules
-   - Check connection strings
-   - Test connectivity from Functions to MySQL
+2. Verify environment variables:
+   - Go to Azure Portal > Your Function App > Configuration
+   - Check that all application settings are correctly set
 
-## Cost Optimization
+## Cost Management
+
+To avoid unexpected costs:
 
 1. Use consumption plan for Functions during development
-2. Scale to Premium plan only when needed for production
-3. Consider reserved instances for MySQL for cost savings
-4. Monitor usage regularly and adjust resources
+2. Consider the Free tier for Azure Static Web Apps
+3. For MySQL, start with Basic tier and scale up as needed
+4. Set up budget alerts in the Azure Portal
+
+## Security Recommendations
+
+1. Store all credentials as environment variables, never in code
+2. Use managed identities where possible
+3. Configure SSL/TLS for all services
+4. Set up Azure Security Center for monitoring
+5. Regularly rotate database passwords and API keys
