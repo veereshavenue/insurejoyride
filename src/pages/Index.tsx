@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import MultiStepForm from "@/components/ui/MultiStepForm";
@@ -14,12 +16,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { toast } from "@/components/ui/use-toast";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated, user, loading } = useAuth();
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [selectedPlan, setSelectedPlan] = useState<InsurancePlan | null>(null);
-  const [userId, setUserId] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -55,46 +58,10 @@ const Index = () => {
     ]
   });
 
-  // Check for Supabase auth session on load
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        setIsLoading(true);
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error("Error getting session:", error.message);
-          // Don't set error state - allow the app to continue without authentication
-        }
-        
-        if (session?.user?.id) {
-          setUserId(session.user.id);
-        }
-      } catch (err) {
-        console.error("Error in checkSession:", err);
-        // Don't set error state - allow the app to continue without authentication
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    checkSession();
-    
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user?.id) {
-          setUserId(session.user.id);
-        } else {
-          setUserId("");
-        }
-      }
-    );
-    
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    // Set loading to false after initial auth check
+    setIsLoading(loading);
+  }, [loading]);
 
   // Handle form submissions for each step
   const handleTravelDetailsSubmit = (data: TravelDetails) => {
@@ -144,6 +111,17 @@ const Index = () => {
   };
   
   const handleReviewConfirm = () => {
+    // Check if the user is authenticated before proceeding to payment
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to continue with your purchase.",
+        variant: "destructive"
+      });
+      navigate("/auth");
+      return;
+    }
+    
     setCurrentStep(5); // Proceed to payment
   };
   
@@ -200,13 +178,18 @@ const Index = () => {
           />
         );
       case 5:
+        // If we somehow got to payment without auth, redirect to auth
+        if (!isAuthenticated) {
+          navigate("/auth");
+          return null;
+        }
         return (
           <PaymentForm
             travelDetails={travelDetails}
             selectedPlan={selectedPlan!}
             onSubmit={handlePaymentComplete}
             onBack={handleBackStep}
-            userId={userId}
+            userId={user?.id || ""}
           />
         );
       case 6:
