@@ -1,3 +1,4 @@
+
 package com.travelinsurance;
 
 import com.microsoft.azure.functions.*;
@@ -46,20 +47,27 @@ public class GetQuotesFunction {
         // Handle OPTIONS request for CORS preflight
         if (request.getHttpMethod() == HttpMethod.OPTIONS) {
             context.getLogger().info("Handling OPTIONS request for CORS preflight");
-            return request
-                    .createResponseBuilder(HttpStatus.OK)
-                    .headers(corsHeaders)
-                    .build();
+            HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.OK);
+            // Add each header individually instead of using headers() method
+            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
+                responseBuilder.header(header.getKey(), header.getValue());
+            }
+            return responseBuilder.build();
         }
 
         // Parse request body
         String requestBody = request.getBody().orElse("");
         if (requestBody.isEmpty()) {
-            return request
+            HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.BAD_REQUEST)
-                    .headers(corsHeaders)
-                    .body("Please provide travel details in the request body")
-                    .build();
+                    .body("Please provide travel details in the request body");
+            
+            // Add each header individually
+            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
+                responseBuilder.header(header.getKey(), header.getValue());
+            }
+            
+            return responseBuilder.build();
         }
 
         try {
@@ -138,20 +146,30 @@ public class GetQuotesFunction {
                 resultArray.put(new JSONObject(plan));
             }
             
-            return request
+            HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.OK)
                     .header("Content-Type", "application/json")
-                    .headers(corsHeaders)
-                    .body(resultArray.toString())
-                    .build();
+                    .body(resultArray.toString());
+            
+            // Add CORS headers individually
+            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
+                responseBuilder.header(header.getKey(), header.getValue());
+            }
+            
+            return responseBuilder.build();
                     
         } catch (Exception e) {
             context.getLogger().severe("Error processing request: " + e.getMessage());
-            return request
+            HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .headers(corsHeaders)
-                    .body("Error processing request: " + e.getMessage())
-                    .build();
+                    .body("Error processing request: " + e.getMessage());
+            
+            // Add CORS headers individually
+            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
+                responseBuilder.header(header.getKey(), header.getValue());
+            }
+            
+            return responseBuilder.build();
         }
     }
 
