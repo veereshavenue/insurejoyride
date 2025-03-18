@@ -24,8 +24,7 @@ const ApiTest = () => {
       id: '1',
       firstName: 'Test',
       lastName: 'User',
-      dateOfBirth: '1988-01-01',
-      age: 35 
+      dateOfBirth: '1988-01-01'
     }]
   });
 
@@ -33,13 +32,12 @@ const ApiTest = () => {
     setRequestData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleTravelerAgeChange = (value: string) => {
-    const age = parseInt(value, 10) || 30;
+  const handleTravelerDateOfBirthChange = (value: string) => {
     setRequestData(prev => ({
       ...prev,
       travelers: [{ 
         ...prev.travelers[0],
-        age 
+        dateOfBirth: value
       }]
     }));
   };
@@ -211,14 +209,12 @@ const ApiTest = () => {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="travelerAge">Traveler Age</Label>
+              <Label htmlFor="travelerDateOfBirth">Traveler Date of Birth</Label>
               <Input 
-                id="travelerAge" 
-                type="number" 
-                min="1" 
-                max="120" 
-                defaultValue={requestData.travelers[0].age}
-                onChange={(e) => handleTravelerAgeChange(e.target.value)}
+                id="travelerDateOfBirth" 
+                type="date" 
+                value={requestData.travelers[0].dateOfBirth}
+                onChange={(e) => handleTravelerDateOfBirthChange(e.target.value)}
               />
             </div>
           </CardContent>
