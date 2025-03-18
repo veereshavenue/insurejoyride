@@ -54,13 +54,20 @@ export const callAzureFunction = async <T>(
     }
   }
 
+  console.log(`Making ${method} request to ${endpoint} with requiresAuth=${requiresAuth}`);
+  
   const options: RequestInit = {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    mode: 'cors',
+    credentials: 'include',
   };
 
-  const response = await fetch(`${apiConfig.baseUrl}/${endpoint}`, options);
+  const url = `${apiConfig.baseUrl}/${endpoint}`;
+  console.log(`Calling Azure Function at: ${url}`);
+  
+  const response = await fetch(url, options);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
