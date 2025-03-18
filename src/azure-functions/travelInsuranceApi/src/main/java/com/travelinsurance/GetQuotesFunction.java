@@ -38,7 +38,7 @@ public class GetQuotesFunction {
         context.getLogger().info("Request method: " + request.getHttpMethod().name());
         context.getLogger().info("Request URL: " + request.getUri().toString());
         
-        // Set CORS headers for all responses
+        // Define CORS headers
         Map<String, String> corsHeaders = new HashMap<>();
         corsHeaders.put("Access-Control-Allow-Origin", "*");
         corsHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -55,15 +55,13 @@ public class GetQuotesFunction {
         if (request.getHttpMethod() == HttpMethod.OPTIONS) {
             context.getLogger().info("Handling OPTIONS request for CORS preflight");
             
-            HttpResponseMessage responseMessage = request
-                .createResponseBuilder(HttpStatus.OK)
-                .build();
-                
-            // Add CORS headers to the response
+            HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.OK);
+            // Add each CORS header individually
             for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseMessage.addHeader(header.getKey(), header.getValue());
+                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
             }
             
+            HttpResponseMessage responseMessage = responseBuilder.build();
             context.getLogger().info("OPTIONS response sent with CORS headers");
             return responseMessage;
         }
@@ -75,16 +73,15 @@ public class GetQuotesFunction {
         if (requestBody.isEmpty()) {
             context.getLogger().warning("Empty request body received");
             
-            HttpResponseMessage responseMessage = request
-                .createResponseBuilder(HttpStatus.BAD_REQUEST)
-                .body("Please provide travel details in the request body")
-                .build();
+            HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.BAD_REQUEST)
+                .body("Please provide travel details in the request body");
                 
-            // Add CORS headers to the response
+            // Add each CORS header individually
             for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseMessage.addHeader(header.getKey(), header.getValue());
+                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
             }
             
+            HttpResponseMessage responseMessage = responseBuilder.build();
             context.getLogger().info("Bad request response sent");
             return responseMessage;
         }
@@ -174,29 +171,25 @@ public class GetQuotesFunction {
             context.getLogger().info("Successfully processed quotes. Returning " + calculatedPlans.size() + " plans.");
             
             // Create the response with the required CORS headers
-            HttpResponseMessage responseMessage = request
+            HttpResponseMessage.Builder responseBuilder = request
                 .createResponseBuilder(HttpStatus.OK)
                 .header("Content-Type", "application/json")
-                .body(resultArray.toString())
-                .build();
+                .body(resultArray.toString());
                 
-            // Add CORS headers to the response
+            // Add each CORS header individually
             for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseMessage.addHeader(header.getKey(), header.getValue());
+                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
             }
             
+            HttpResponseMessage responseMessage = responseBuilder.build();
             context.getLogger().info("Success response sent with quotes");
             
             // Log all response headers for debugging
             context.getLogger().info("=== RESPONSE HEADERS ===");
-            final HttpResponseMessage finalResponse = responseMessage;
-            request.createResponseBuilder(HttpStatus.OK).build().getHeaders().forEach((key, value) -> {
-                context.getLogger().info(key + ": " + value);
-            });
-            // Also log all the headers we manually added
-            corsHeaders.forEach((key, value) -> {
-                context.getLogger().info(key + ": " + value + " (manually added)");
-            });
+            // Log the headers we added
+            for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
+                context.getLogger().info(header.getKey() + ": " + header.getValue() + " (added to response)");
+            }
             
             return responseMessage;
                     
@@ -204,16 +197,16 @@ public class GetQuotesFunction {
             context.getLogger().severe("Error processing request: " + e.getMessage());
             e.printStackTrace();
             
-            HttpResponseMessage responseMessage = request
+            HttpResponseMessage.Builder responseBuilder = request
                 .createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Error processing request: " + e.getMessage())
-                .build();
+                .body("Error processing request: " + e.getMessage());
                 
-            // Add CORS headers to the response
+            // Add each CORS header individually
             for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
-                responseMessage.addHeader(header.getKey(), header.getValue());
+                responseBuilder = responseBuilder.header(header.getKey(), header.getValue());
             }
             
+            HttpResponseMessage responseMessage = responseBuilder.build();
             context.getLogger().info("Error response sent");
             return responseMessage;
         }
