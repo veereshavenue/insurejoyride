@@ -1,3 +1,4 @@
+
 package com.travelinsurance;
 
 import com.microsoft.azure.functions.*;
@@ -35,8 +36,9 @@ public class GetQuotesFunction {
             return request.createResponseBuilder(HttpStatus.OK)
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                .header("Access-Control-Allow-Headers", "*")
+                .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
                 .header("Access-Control-Max-Age", "86400")
+                .header("Access-Control-Allow-Credentials", "true")
                 .build();
         }
 
@@ -47,7 +49,8 @@ public class GetQuotesFunction {
                 return request.createResponseBuilder(HttpStatus.BAD_REQUEST)
                     .header("Access-Control-Allow-Origin", "*")
                     .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                    .header("Access-Control-Allow-Headers", "*")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+                    .header("Access-Control-Allow-Credentials", "true")
                     .body("Please provide travel details in the request body")
                     .build();
             }
@@ -139,7 +142,8 @@ public class GetQuotesFunction {
                 .header("Content-Type", "application/json")
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                .header("Access-Control-Allow-Headers", "*")
+                .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+                .header("Access-Control-Allow-Credentials", "true")
                 .body(resultArray.toString())
                 .build();
                     
@@ -148,7 +152,8 @@ public class GetQuotesFunction {
             return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
                 .header("Access-Control-Allow-Origin", "*")
                 .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                .header("Access-Control-Allow-Headers", "*")
+                .header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+                .header("Access-Control-Allow-Credentials", "true")
                 .body("Error processing request: " + e.getMessage())
                 .build();
         }
