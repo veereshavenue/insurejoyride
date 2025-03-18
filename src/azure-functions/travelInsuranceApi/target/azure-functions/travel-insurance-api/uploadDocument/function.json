@@ -1,0 +1,16 @@
+{
+  "scriptFile" : "../travelInsuranceApi-1.0-SNAPSHOT.jar",
+  "entryPoint" : "com.travelinsurance.DocumentUploadFunction.run",
+  "bindings" : [ {
+    "type" : "httpTrigger",
+    "direction" : "in",
+    "name" : "req",
+    "route" : "documents/upload",
+    "methods" : [ "POST" ],
+    "authLevel" : "FUNCTION"
+  }, {
+    "type" : "http",
+    "direction" : "out",
+    "name" : "$return"
+  } ]
+}
