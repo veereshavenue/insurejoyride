@@ -1,4 +1,3 @@
-
 {
   "scriptFile" : "../travelInsuranceApi-1.0-SNAPSHOT.jar",
   "entryPoint" : "com.travelinsurance.GetQuotesFunction.run",

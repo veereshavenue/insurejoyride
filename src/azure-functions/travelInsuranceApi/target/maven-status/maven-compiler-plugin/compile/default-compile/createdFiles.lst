@@ -1,2 +1,6 @@
-
-
+com\travelinsurance\UserProfileFunction.class
+com\travelinsurance\GetPlanDetailsFunction.class
+com\travelinsurance\DocumentUploadFunction.class
+com\travelinsurance\PurchasePlanFunction.class
+com\travelinsurance\PaymentFunction.class
+com\travelinsurance\GetQuotesFunction.class
