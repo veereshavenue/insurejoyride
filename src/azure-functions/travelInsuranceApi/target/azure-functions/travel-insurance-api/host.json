@@ -28,8 +28,7 @@
       "*"
     ],
     "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allowedHeaders": ["*"],
-    "allowCredentials": false,
+    "allowedHeaders": ["Content-Type", "Authorization", "x-client-info", "apikey", "x-requested-with", "origin", "accept"],
     "maxAge": 86400
   }
 }
