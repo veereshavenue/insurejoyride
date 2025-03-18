@@ -6,7 +6,7 @@
     "direction" : "in",
     "name" : "req",
     "route" : "quotes",
-    "methods" : [ "POST" ],
+    "methods" : [ "POST", "OPTIONS" ],
     "authLevel" : "ANONYMOUS"
   }, {
     "type" : "http",
