@@ -1,3 +1,4 @@
+
 # Azure Deployment Guide for Travel Insurance Application
 
 This document provides comprehensive instructions for deploying the Travel Insurance application on Azure Cloud, with detailed examples for those new to Azure.
@@ -231,13 +232,58 @@ mvn azure-functions:deploy
 
 ## Step 5: Configure CORS for Azure Functions
 
+CORS (Cross-Origin Resource Sharing) configuration is critical to allow your frontend to communicate with your Azure Functions. Here's how to properly configure it:
+
 ```bash
-# Configure CORS for Azure Functions
+# Configure CORS for Azure Functions using Azure CLI
 az functionapp cors add \
   --name travel-insurance-api \
   --resource-group travel-insurance-rg \
-  --allowed-origins "https://travel-insurance-app.azurestaticapps.net"
+  --allowed-origins "https://travel-insurance-app.azurestaticapps.net" "https://lively-smoke-0eae5a610.azurestaticapps.net" "*"
 ```
+
+Additionally, verify that the `host.json` file in your Azure Function app includes proper CORS configuration:
+
+```json
+{
+  "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[1.*, 2.0.0)"
+  },
+  "cors": {
+    "allowedOrigins": [
+      "https://lively-smoke-0eae5a610.azurestaticapps.net",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "*"
+    ],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allowedHeaders": ["*"],
+    "allowCredentials": true,
+    "maxAge": 86400
+  }
+}
+```
+
+Ensure that your function code also includes the appropriate CORS headers in the response:
+
+```java
+// Example CORS headers in Java Function
+Map<String, String> corsHeaders = new HashMap<>();
+corsHeaders.put("Access-Control-Allow-Origin", "*");
+corsHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+corsHeaders.put("Access-Control-Allow-Headers", "Content-Type, Authorization");
+corsHeaders.put("Access-Control-Max-Age", "86400");
+
+return request
+    .createResponseBuilder(HttpStatus.OK)
+    .headers(corsHeaders)
+    .body(resultData)
+    .build();
+```
+
+Important: Your Azure Function should handle OPTIONS preflight requests by returning a 200 OK response with the appropriate CORS headers.
 
 ## Step 6: Deploy Front-end to Azure Static Web Apps
 
@@ -426,6 +472,49 @@ Remember that some changes to Azure resources (like CORS settings in host.json) 
    - Try to purchase a plan after logging in
 
 ## Troubleshooting Common Issues
+
+### CORS Issues
+
+If you encounter CORS errors like:
+```
+Access to fetch at 'https://travel-insurance-api.azurewebsites.net/api/quotes' from origin 'https://lively-smoke-0eae5a610.azurestaticapps.net' has been blocked by CORS policy
+```
+
+Try these solutions:
+
+1. **Update Azure Function CORS settings via Portal**:
+   - Go to Azure Portal > Your Function App > CORS
+   - Add your frontend URL (e.g., `https://lively-smoke-0eae5a610.azurestaticapps.net`)
+   - Add `*` temporarily for testing
+   - Save the changes
+
+2. **Update Azure Function CORS settings via CLI**:
+   ```bash
+   az functionapp cors add --name travel-insurance-api --resource-group travel-insurance-rg --allowed-origins "*"
+   ```
+
+3. **Verify host.json CORS configuration**:
+   - Download your function app's host.json
+   - Ensure it includes the correct CORS configuration
+   - Upload the updated host.json
+
+4. **Update Function Code to Include CORS Headers**:
+   - Make sure every HTTP response includes the necessary CORS headers
+   - Handle OPTIONS requests correctly
+
+5. **Restart the Function App**:
+   ```bash
+   az functionapp restart --name travel-insurance-api --resource-group travel-insurance-rg
+   ```
+
+6. **Check Network Requests in Browser**:
+   - Open the browser developer tools (F12) and go to the Network tab
+   - Look for the failing requests and check the response headers
+   - Verify that CORS headers are present in the response
+
+7. **Ensure Function is Handling OPTIONS Requests**:
+   - Your function should include `OPTIONS` in the supported HTTP methods
+   - It should return a 200 OK response with CORS headers for OPTIONS requests
 
 ### Azure AD B2C Issues
 
