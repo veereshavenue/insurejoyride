@@ -1,3 +1,4 @@
+
 package com.travelinsurance;
 
 import com.microsoft.azure.functions.*;
@@ -22,24 +23,39 @@ public class GetQuotesFunction {
     /**
      * This function listens at endpoint "/api/quotes".
      * Updated to use ANONYMOUS authorization level to allow unauthenticated requests
+     * and support OPTIONS for CORS preflight
      */
     @FunctionName("getQuotes")
     public HttpResponseMessage run(
             @HttpTrigger(
                 name = "req",
-                methods = {HttpMethod.POST},
+                methods = {HttpMethod.POST, HttpMethod.OPTIONS},
                 authLevel = AuthorizationLevel.ANONYMOUS,
                 route = "quotes")
                 HttpRequestMessage<Optional<String>> request,
             final ExecutionContext context) {
         
         context.getLogger().info("Java HTTP trigger processed a request for insurance quotes.");
+        
+        // Handle OPTIONS request for CORS preflight
+        if (request.getHttpMethod() == HttpMethod.OPTIONS) {
+            return request
+                    .createResponseBuilder(HttpStatus.OK)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    .header("Access-Control-Max-Age", "86400")
+                    .build();
+        }
 
         // Parse request body
         String requestBody = request.getBody().orElse("");
         if (requestBody.isEmpty()) {
             return request
                     .createResponseBuilder(HttpStatus.BAD_REQUEST)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body("Please provide travel details in the request body")
                     .build();
         }
@@ -123,6 +139,9 @@ public class GetQuotesFunction {
             return request
                     .createResponseBuilder(HttpStatus.OK)
                     .header("Content-Type", "application/json")
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body(resultArray.toString())
                     .build();
                     
@@ -130,6 +149,9 @@ public class GetQuotesFunction {
             context.getLogger().severe("Error processing request: " + e.getMessage());
             return request
                     .createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "Content-Type, Authorization")
                     .body("Error processing request: " + e.getMessage())
                     .build();
         }

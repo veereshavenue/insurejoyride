@@ -344,6 +344,70 @@ GitHub Actions is automatically configured when you create an Azure Static Web A
 
 3. The GitHub workflow file is already created at `.github/workflows/azure-static-web-apps-*.yml`
 
+## Automatic Deployments and CI/CD
+
+When you update code in your GitHub repository, deployments may be automatically triggered depending on your setup:
+
+### Frontend (Azure Static Web Apps)
+
+Azure Static Web Apps has built-in CI/CD integration with GitHub. When you push changes to your repository:
+
+1. GitHub Actions workflow is automatically triggered
+2. The workflow builds and deploys your application
+3. You can see the deployment status in GitHub Actions tab of your repository
+
+You don't need to manually redeploy the frontend after code changes if:
+- Your repository is connected to Azure Static Web Apps
+- The GitHub Actions workflow is properly configured
+- You push changes to the branch that's configured for deployment (usually `main`)
+
+To check if automatic deployments are enabled:
+1. Go to Azure Portal > Your Static Web App > Deployment > GitHub Actions
+2. Ensure "GitHub Actions enabled" is set to "Yes"
+
+### Backend (Azure Functions)
+
+For Azure Functions, automatic deployments depend on your setup:
+
+1. **GitHub Actions (Recommended)**:
+   - If configured, changes to function code trigger automatic builds and deployments
+   - Check `.github/workflows/` directory for Azure Functions deployment workflows
+
+2. **Azure DevOps Pipelines**:
+   - If you're using Azure DevOps, pipelines can be configured for automatic deployment
+
+3. **Manual Deployment**:
+   - If neither of the above is configured, you need to manually redeploy:
+   ```bash
+   cd src/azure-functions/travelInsuranceApi
+   mvn clean package
+   mvn azure-functions:deploy
+   ```
+
+### Checking Deployment Status
+
+- **Frontend**: Go to GitHub repository > Actions tab > Look for recent workflow runs
+- **Backend**: Go to Azure Portal > Your Function App > Deployment Center
+
+### What to Do After Code Changes
+
+1. **If CI/CD is set up properly**:
+   - Push changes to your repository
+   - Wait for automated deployments to complete
+   - Verify functionality
+
+2. **If no CI/CD or manual deployment needed**:
+   - Frontend: Run GitHub Actions workflow manually
+   - Backend: Use the manual deployment steps above
+
+3. **After deployment, verify that**:
+   - New code is deployed
+   - CORS settings are applied
+   - Authentication is working correctly
+   - All functions are accessible
+
+Remember that some changes to Azure resources (like CORS settings in host.json) might require manual updates through the Azure Portal or Azure CLI, even if you have CI/CD configured.
+
 ## Verifying Your Deployment
 
 1. **Test the Frontend**

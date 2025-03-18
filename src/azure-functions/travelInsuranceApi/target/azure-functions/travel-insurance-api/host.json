@@ -1,1 +1,18 @@
-{"version":"2.0","extensionBundle":{"id":"Microsoft.Azure.Functions.ExtensionBundle","version":"[1.*, 2.0.0)"}}
+
+{
+  "version": "2.0",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[1.*, 2.0.0)"
+  },
+  "cors": {
+    "allowedOrigins": [
+      "https://lively-smoke-0eae5a610.6.azurestaticapps.net",
+      "http://localhost:3000",
+      "http://localhost:5173"
+    ],
+    "allowedMethods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allowedHeaders": ["*"],
+    "allowCredentials": true
+  }
+}
