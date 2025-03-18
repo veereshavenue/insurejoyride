@@ -41,23 +41,33 @@ public class GetQuotesFunction {
         Map<String, String> corsHeaders = new HashMap<>();
         corsHeaders.put("Access-Control-Allow-Origin", "*");
         corsHeaders.put("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        corsHeaders.put("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        corsHeaders.put("Access-Control-Allow-Headers", "Content-Type, Authorization, x-client-info, apikey, X-Requested-With");
         corsHeaders.put("Access-Control-Max-Age", "86400");
+        
+        // Log the request method and headers for debugging
+        context.getLogger().info("Request Method: " + request.getHttpMethod());
+        request.getHeaders().forEach((key, value) -> 
+            context.getLogger().info("Header - " + key + ": " + value));
         
         // Handle OPTIONS request for CORS preflight
         if (request.getHttpMethod() == HttpMethod.OPTIONS) {
             context.getLogger().info("Handling OPTIONS request for CORS preflight");
             HttpResponseMessage.Builder responseBuilder = request.createResponseBuilder(HttpStatus.OK);
+            
             // Add each header individually instead of using headers() method
             for (Map.Entry<String, String> header : corsHeaders.entrySet()) {
                 responseBuilder.header(header.getKey(), header.getValue());
             }
+            
             return responseBuilder.build();
         }
 
         // Parse request body
         String requestBody = request.getBody().orElse("");
+        context.getLogger().info("Request body: " + requestBody);
+        
         if (requestBody.isEmpty()) {
+            context.getLogger().warning("Empty request body received");
             HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.BAD_REQUEST)
                     .body("Please provide travel details in the request body");
@@ -73,6 +83,7 @@ public class GetQuotesFunction {
         try {
             // Parse the request JSON
             JSONObject requestJson = new JSONObject(requestBody);
+            context.getLogger().info("Parsed JSON: " + requestJson.toString());
             
             // Extract travel details
             String coverageType = requestJson.getString("coverageType");
@@ -83,6 +94,10 @@ public class GetQuotesFunction {
             JSONArray travelersJson = requestJson.getJSONArray("travelers");
             int numTravelers = travelersJson.length();
             
+            context.getLogger().info("Processing quote for: " + coverageType + " - " + tripType + 
+                                     " - from " + startDate + " to " + endDate + 
+                                     " - " + coverType + " - Travelers: " + numTravelers);
+            
             // Calculate trip duration
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
@@ -90,6 +105,7 @@ public class GetQuotesFunction {
             
             // Get insurance plans from database
             List<Map<String, Object>> plans = getInsurancePlans();
+            context.getLogger().info("Retrieved " + plans.size() + " insurance plans from database");
             
             // Get benefits for all plans
             Map<String, List<Map<String, Object>>> benefitsByPlanId = getBenefitsByPlanId();
@@ -146,6 +162,8 @@ public class GetQuotesFunction {
                 resultArray.put(new JSONObject(plan));
             }
             
+            context.getLogger().info("Successfully processed quotes. Returning " + calculatedPlans.size() + " plans.");
+            
             HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.OK)
                     .header("Content-Type", "application/json")
@@ -156,10 +174,18 @@ public class GetQuotesFunction {
                 responseBuilder.header(header.getKey(), header.getValue());
             }
             
-            return responseBuilder.build();
+            HttpResponseMessage response = responseBuilder.build();
+            
+            // Log response headers for debugging
+            response.getHeaders().forEach((key, value) -> 
+                context.getLogger().info("Response Header - " + key + ": " + value));
+            
+            return response;
                     
         } catch (Exception e) {
             context.getLogger().severe("Error processing request: " + e.getMessage());
+            e.printStackTrace();
+            
             HttpResponseMessage.Builder responseBuilder = request
                     .createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error processing request: " + e.getMessage());
