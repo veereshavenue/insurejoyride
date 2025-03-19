@@ -1,6 +1,6 @@
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 const Auth = () => {
   const { isAuthenticated, login, loginWithGoogle, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -26,6 +27,13 @@ const Auth = () => {
 
   const handleLogin = async () => {
     try {
+      // Store the current path or referrer if it's not already set
+      if (!sessionStorage.getItem('redirectAfterAuth')) {
+        // Use state from location if coming from a redirect, otherwise use pathname
+        const redirectPath = location.state?.from || '/';
+        sessionStorage.setItem('redirectAfterAuth', redirectPath);
+      }
+      
       await login();
     } catch (error) {
       toast({
@@ -38,6 +46,13 @@ const Auth = () => {
 
   const handleGoogleLogin = async () => {
     try {
+      // Store the current path or referrer if it's not already set
+      if (!sessionStorage.getItem('redirectAfterAuth')) {
+        // Use state from location if coming from a redirect, otherwise use pathname
+        const redirectPath = location.state?.from || '/';
+        sessionStorage.setItem('redirectAfterAuth', redirectPath);
+      }
+      
       await loginWithGoogle();
     } catch (error) {
       toast({

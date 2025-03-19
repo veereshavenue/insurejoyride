@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { EventType, EventMessage, AuthenticationResult } from '@azure/msal-browser';
 import { msalInstance, getActiveAccount, signIn, signOut, signInWithGoogle } from '../integrations/azure/client';
 
@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async () => {
     try {
       // Store current path before redirect
-      const currentPath = window.location.pathname;
+      const currentPath = location.pathname;
       sessionStorage.setItem('redirectAfterAuth', currentPath);
       
       await signIn();
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       // Store current path before redirect
-      const currentPath = window.location.pathname;
+      const currentPath = location.pathname;
       sessionStorage.setItem('redirectAfterAuth', currentPath);
       
       await signInWithGoogle();
