@@ -92,7 +92,23 @@
                         <property>
                             <name>MYSQL_CONNECTION_STRING</name>
                             <value>jdbc:mysql://travel-insurance-mysql.mysql.database.azure.com:3306/flexibleserverdb?useSSL=true</value>
-                        </property>                        
+                        </property>     
+                                                <property>
+                            <name>MYSQL_PASSWORD</name>
+                            <value>Insure102*</value>
+                        </property>  
+                                                <property>
+                            <name>MYSQL_USER</name>
+                            <value>adminuser</value>
+                        </property>  
+                                                <property>
+                            <name>AZURE_AD_B2C_CLIENT_ID</name>
+                            <value>63c11526-d1b7-47d8-8889-a6a9b171eff7</value>
+                        </property>  
+                                                <property>
+                            <name>AZURE_AD_B2C_TENANT</name>
+                            <value>insurebuddy.onmicrosoft.com</value>
+                        </property>                   
                     </appSettings>
                 </configuration>
                 <executions>

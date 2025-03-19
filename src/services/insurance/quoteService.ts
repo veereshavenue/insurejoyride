@@ -10,7 +10,7 @@ export const getInsuranceQuotes = async (travelDetails: TravelDetails): Promise<
     console.log('Calling get-insurance-quotes Azure function with travel details:', JSON.stringify(travelDetails, null, 2));
     
     // Set requiresAuth to false since we want to allow unauthenticated users to get quotes
-    const data = await callAzureFunction<InsurancePlan[]>('quotes', 'POST', travelDetails, false);
+    const data = await callAzureFunction<InsurancePlan[]>('getQuotes', 'POST', travelDetails, false);
     
     if (!data || data.length === 0) {
       console.warn('No data returned from get-insurance-quotes Azure function');
