@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EventType, EventMessage, AuthenticationResult } from '@azure/msal-browser';
 import { msalInstance, getActiveAccount, signIn, signOut, signInWithGoogle } from '../integrations/azure/client';
 
@@ -30,6 +31,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -43,6 +45,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               email: result.account?.username,
               name: result.account?.name || 'User',
             });
+            
+            // Redirect to the stored path after successful authentication
+            const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+            if (redirectPath) {
+              sessionStorage.removeItem('redirectAfterAuth');
+              navigate(redirectPath);
+            } else {
+              navigate('/');
+            }
           } else if (event.eventType === EventType.LOGOUT_SUCCESS) {
             setUser(null);
           }
@@ -69,10 +80,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       // Cleanup if needed
     };
-  }, []);
+  }, [navigate]);
 
   const login = async () => {
     try {
+      // Store current path before redirect
+      const currentPath = window.location.pathname;
+      sessionStorage.setItem('redirectAfterAuth', currentPath);
+      
       await signIn();
     } catch (error) {
       console.error('Login error:', error);
@@ -82,6 +97,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginWithGoogle = async () => {
     try {
+      // Store current path before redirect
+      const currentPath = window.location.pathname;
+      sessionStorage.setItem('redirectAfterAuth', currentPath);
+      
       await signInWithGoogle();
     } catch (error) {
       console.error('Google login error:', error);
@@ -114,3 +133,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;

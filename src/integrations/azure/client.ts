@@ -143,6 +143,10 @@ export const signOut = async (): Promise<void> => {
 // Initialize MSAL
 export const initializeAuth = (): void => {
   msalInstance.initialize().then(() => {
+    // Store the original location before redirect
+    const currentPath = window.location.pathname;
+    sessionStorage.setItem('redirectAfterAuth', currentPath);
+    
     msalInstance.handleRedirectPromise().catch(error => {
       console.error('Error handling redirect:', error);
     });
@@ -157,9 +161,11 @@ export const getAuthStatus = (): boolean => {
 // Log in with Google
 export const signInWithGoogle = async (): Promise<void> => {
   try {
+    // For Google login with Azure AD B2C, we need to specify the identity provider
     await msalInstance.loginRedirect({
       scopes: apiConfig.scopes,
-      loginHint: 'google',
+      prompt: 'select_account',
+      loginHint: 'GOOGLE',  // This indicates we want to use Google as the identity provider
     });
   } catch (error) {
     console.error('Google login error:', error);

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { FaGoogle } from 'react-icons/fa';
+import { toast } from "@/components/ui/use-toast";
 
 const Auth = () => {
   const { isAuthenticated, login, loginWithGoogle, loading } = useAuth();
@@ -12,9 +13,40 @@ const Auth = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      // Check if there's a stored redirect path
+      const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterAuth');
+        navigate(redirectPath);
+      } else {
+        navigate('/');
+      }
     }
   }, [isAuthenticated, navigate]);
+
+  const handleLogin = async () => {
+    try {
+      await login();
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (error) {
+      toast({
+        title: "Google login failed",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -36,7 +68,7 @@ const Auth = () => {
         <CardContent className="space-y-4">
           <Button 
             className="w-full"
-            onClick={() => login()}
+            onClick={handleLogin}
           >
             Sign in with Email
           </Button>
@@ -53,7 +85,7 @@ const Auth = () => {
           <Button 
             variant="outline" 
             className="w-full flex items-center justify-center gap-2"
-            onClick={() => loginWithGoogle()}
+            onClick={handleGoogleLogin}
           >
             <FaGoogle className="text-red-600" />
             Sign in with Google
