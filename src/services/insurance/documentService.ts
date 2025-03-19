@@ -19,7 +19,7 @@ export const uploadDocument = async (
     formData.append('documentType', documentType);
     
     // Custom implementation for file upload
-    const response = await fetch(`${import.meta.env.VITE_AZURE_FUNCTION_URL}/api/documents/upload`, {
+    const response = await fetch(`${import.meta.env.VITE_AZURE_FUNCTION_URL}/documents/upload`, {
       method: 'POST',
       body: formData,
       headers: {

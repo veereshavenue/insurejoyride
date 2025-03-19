@@ -15,7 +15,7 @@ export const updateUserProfile = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const data = await callAzureFunction<{ success: boolean; error?: string }>(
-      'user/profile',
+      'user-profile',
       'POST',
       profileData
     );
