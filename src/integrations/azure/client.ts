@@ -4,10 +4,10 @@ import { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azu
 // Azure AD B2C configuration
 const msalConfig = {
   auth: {
-    clientId: import.meta.env.VITE_AZURE_AD_CLIENT_ID || 'default-client-id',
-    authority: import.meta.env.VITE_AZURE_AD_AUTHORITY || 'https://travelinsurance.b2clogin.com/travelinsurance.onmicrosoft.com/B2C_1_signupsignin',
+    clientId: import.meta.env.VITE_AZURE_AD_CLIENT_ID || '63c11526-d1b7-47d8-8889-a6a9b171eff7',
+    authority: import.meta.env.VITE_AZURE_AD_AUTHORITY || 'https://insurebuddy.b2clogin.com/insurebuddy.onmicrosoft.com/B2C_1_travel-insurance-app-signin',
     redirectUri: import.meta.env.VITE_AZURE_AD_REDIRECT_URI || window.location.origin,
-    knownAuthorities: [import.meta.env.VITE_AZURE_AD_KNOWN_AUTHORITY || 'travelinsurance.b2clogin.com'],
+    knownAuthorities: [import.meta.env.VITE_AZURE_AD_KNOWN_AUTHORITY || 'insurebuddy.b2clogin.com'],
   },
   cache: {
     cacheLocation: 'localStorage',
@@ -17,8 +17,8 @@ const msalConfig = {
 
 // Azure Function App configuration
 const apiConfig = {
-  baseUrl: import.meta.env.VITE_AZURE_FUNCTION_URL || 'https://travel-insurance-api.azurewebsites.net/api',
-  scopes: [(import.meta.env.VITE_AZURE_AD_SCOPE || 'https://travelinsurance.onmicrosoft.com/api/user_impersonation')],
+  baseUrl: import.meta.env.VITE_AZURE_FUNCTION_URL || 'https://travel1-insurance-api.azurewebsites.net/api',
+  scopes: [(import.meta.env.VITE_AZURE_AD_SCOPE || 'https://insurebuddy.onmicrosoft.com/user_impersonation')],
 };
 
 // MSAL instance
@@ -33,6 +33,10 @@ export const callAzureFunction = async <T>(
 ): Promise<T> => {
   let headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'GET, POST, OPTION',
+    'access-control-allow-headers': 'Content-Type, Authorization, X-Requested-With'
   };
 
   // Add authorization header if authentication is required
