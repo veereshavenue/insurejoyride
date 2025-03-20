@@ -1,3 +1,4 @@
+
 import { PublicClientApplication, AccountInfo, AuthenticationResult } from '@azure/msal-browser';
 
 // Azure AD B2C configuration
@@ -117,8 +118,10 @@ export const getActiveAccount = (): AccountInfo | null => {
 // Log in user
 export const signIn = async (): Promise<void> => {
   try {
+    console.log('Starting standard login redirect flow...');
     await msalInstance.loginRedirect({
       scopes: apiConfig.scopes,
+      redirectUri: window.location.origin,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -131,6 +134,7 @@ export const signOut = async (): Promise<void> => {
   try {
     const logoutRequest = {
       account: getActiveAccount() as AccountInfo,
+      postLogoutRedirectUri: window.location.origin,
     };
     await msalInstance.logout(logoutRequest);
   } catch (error) {
@@ -141,11 +145,18 @@ export const signOut = async (): Promise<void> => {
 
 // Initialize MSAL
 export const initializeAuth = (): void => {
+  console.log('Initializing MSAL...');
   msalInstance.initialize().then(() => {
     // Handle redirect promise after initialization
-    msalInstance.handleRedirectPromise().catch(error => {
-      console.error('Error handling redirect:', error);
-    });
+    msalInstance.handleRedirectPromise()
+      .then(response => {
+        console.log('Redirect handled, response:', response ? 'Auth successful' : 'No response');
+      })
+      .catch(error => {
+        console.error('Error handling redirect:', error);
+      });
+  }).catch(error => {
+    console.error('MSAL initialization error:', error);
   });
 };
 
@@ -157,14 +168,16 @@ export const getAuthStatus = (): boolean => {
 // Log in with Google
 export const signInWithGoogle = async (): Promise<void> => {
   try {
-    // For Google login with Azure AD B2C
-    const loginRequest = {
+    console.log('Starting Google login redirect flow...');
+    // For Google login with Azure AD B2C, we need to use the idp parameter
+    // Note: This depends on how your Azure B2C tenant is configured for Google
+    await msalInstance.loginRedirect({
       scopes: apiConfig.scopes,
-      loginHint: 'GOOGLE',  // This indicates we want to use Google as the identity provider
-    };
-    
-    console.log('Initiating Google login with:', loginRequest);
-    await msalInstance.loginRedirect(loginRequest);
+      redirectUri: window.location.origin,
+      extraQueryParameters: {
+        idp: 'google.com' // This is the key for Azure B2C to redirect to Google
+      }
+    });
   } catch (error) {
     console.error('Google login error:', error);
     throw error;

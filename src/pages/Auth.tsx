@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,21 +11,28 @@ const Auth = () => {
   const { isAuthenticated, login, loginWithGoogle, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [redirectProcessed, setRedirectProcessed] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Only process auth redirect once to prevent infinite loops
+    if (isAuthenticated && !redirectProcessed) {
+      setRedirectProcessed(true);
+      
       // Check if there's a stored redirect path
       const redirectPath = sessionStorage.getItem('redirectAfterAuth');
       console.log("Auth page detected auth, redirect path:", redirectPath);
       
       if (redirectPath) {
         sessionStorage.removeItem('redirectAfterAuth');
-        navigate(redirectPath);
+        console.log("Navigating to:", redirectPath);
+        navigate(redirectPath, { replace: true });
       } else {
-        navigate('/');
+        // Default to home if no redirect path
+        console.log("No redirect path found, going home");
+        navigate('/', { replace: true });
       }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectProcessed]);
 
   const handleLogin = async () => {
     try {
@@ -84,6 +91,19 @@ const Auth = () => {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // If already authenticated, show a message while the redirect happens
+  if (isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-medium mb-2">Already authenticated</h2>
+          <p className="text-gray-600">Redirecting you...</p>
+          <div className="mt-4 w-8 h-8 border-t-4 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
+        </div>
       </div>
     );
   }

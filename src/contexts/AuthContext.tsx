@@ -31,8 +31,32 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [redirectInProgress, setRedirectInProgress] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Process redirect after authentication
+  const processRedirect = (session: any) => {
+    if (!session) return;
+    
+    // Prevent duplicate redirects
+    if (redirectInProgress) return;
+    
+    const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+    console.log("Processing redirect, path:", redirectPath, "current location:", location.pathname);
+    
+    if (redirectPath && location.pathname === '/auth') {
+      console.log("Redirecting to:", redirectPath);
+      setRedirectInProgress(true);
+      sessionStorage.removeItem('redirectAfterAuth');
+      
+      // Use a setTimeout to ensure the redirect happens after the component has settled
+      setTimeout(() => {
+        navigate(redirectPath);
+        setRedirectInProgress(false);
+      }, 100);
+    }
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -47,16 +71,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               name: result.account?.name || 'User',
             });
             
-            // Redirect to the stored path after successful authentication
-            const redirectPath = sessionStorage.getItem('redirectAfterAuth');
-            console.log("Redirect path from sessionStorage:", redirectPath);
-            
-            if (redirectPath) {
-              sessionStorage.removeItem('redirectAfterAuth');
-              navigate(redirectPath);
-            } else {
-              navigate('/');
-            }
+            // Process the redirect in the callback
+            processRedirect(result.account);
           } else if (event.eventType === EventType.LOGOUT_SUCCESS) {
             setUser(null);
           }
@@ -70,6 +86,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: account.username,
             name: account.name || 'User',
           });
+          
+          // Process the redirect on initial load too
+          processRedirect(account);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -79,15 +98,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
-
-    return () => {
-      // Cleanup if needed
-    };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   const login = async () => {
     try {
-      // Store current path before redirect
+      // Store current path before redirect if we're not already on the auth page
       if (location.pathname !== '/auth') {
         const currentPath = location.pathname + location.search;
         console.log("Storing current path before auth:", currentPath);
@@ -103,7 +118,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginWithGoogle = async () => {
     try {
-      // Store current path before redirect
+      // Store current path before redirect if we're not already on the auth page
       if (location.pathname !== '/auth') {
         const currentPath = location.pathname + location.search;
         console.log("Storing current path before Google auth:", currentPath);
