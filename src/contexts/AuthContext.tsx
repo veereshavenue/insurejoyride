@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { EventType, EventMessage, AuthenticationResult } from '@azure/msal-browser';
-import { msalInstance, getActiveAccount, signIn, signOut, signInWithGoogle } from '../integrations/azure/client';
+import { msalInstance, getActiveAccount, signIn, signOut, signInWithGoogle, initiatePasswordReset } from '../integrations/azure/client';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -11,6 +11,7 @@ interface AuthContextType {
   login: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   loginWithGoogle: async () => {},
   logout: async () => {},
+  resetPassword: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -50,11 +52,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setRedirectInProgress(true);
       sessionStorage.removeItem('redirectAfterAuth');
       
-      // Use a setTimeout to ensure the redirect happens after the component has settled
+      // Use navigate with replace to avoid browser history issues
+      navigate(redirectPath, { replace: true });
+      
+      // Reset the redirect flag after a delay
       setTimeout(() => {
-        navigate(redirectPath);
         setRedirectInProgress(false);
-      }, 100);
+      }, 500);
     }
   };
 
@@ -75,6 +79,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             processRedirect(result.account);
           } else if (event.eventType === EventType.LOGOUT_SUCCESS) {
             setUser(null);
+          } else if (event.eventType === EventType.LOGIN_FAILURE) {
+            console.error("Login failure event:", event.error);
           }
         });
 
@@ -142,6 +148,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      // Store the current location for redirect after password reset
+      const currentPath = location.pathname !== '/auth' 
+        ? location.pathname + location.search 
+        : '/';
+      
+      console.log("Storing path for after password reset:", currentPath);
+      sessionStorage.setItem('redirectAfterAuth', currentPath);
+      
+      await initiatePasswordReset(email);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -151,6 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         loginWithGoogle,
         logout,
+        resetPassword,
       }}
     >
       {children}

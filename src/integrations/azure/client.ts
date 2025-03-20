@@ -15,6 +15,10 @@ const msalConfig = {
   }
 };
 
+// Password reset policy
+const passwordResetAuthority = import.meta.env.VITE_AZURE_AD_PASSWORD_RESET_AUTHORITY || 
+  'https://insurebuddy.b2clogin.com/insurebuddy.onmicrosoft.com/B2C_1_travel-insurance-app-password-reset';
+
 // Azure Function App configuration
 const apiConfig = {
   baseUrl: import.meta.env.VITE_AZURE_FUNCTION_URL || 'https://travel1-insurance-api.azurewebsites.net/api',
@@ -121,10 +125,37 @@ export const signIn = async (): Promise<void> => {
     console.log('Starting standard login redirect flow...');
     await msalInstance.loginRedirect({
       scopes: apiConfig.scopes,
-      redirectUri: window.location.origin,
+      redirectUri: window.location.origin + '/auth',
     });
   } catch (error) {
     console.error('Login error:', error);
+    throw error;
+  }
+};
+
+// Initiate password reset
+export const initiatePasswordReset = async (email?: string): Promise<void> => {
+  try {
+    console.log('Starting password reset flow...');
+    
+    // Configure the password reset request
+    const passwordResetRequest = {
+      authority: passwordResetAuthority,
+      scopes: apiConfig.scopes,
+      redirectUri: window.location.origin + '/auth',
+    };
+    
+    // Add login_hint if email is provided to pre-fill the email field
+    if (email) {
+      Object.assign(passwordResetRequest, {
+        loginHint: email
+      });
+    }
+    
+    // Start the password reset flow
+    await msalInstance.loginRedirect(passwordResetRequest);
+  } catch (error) {
+    console.error('Password reset error:', error);
     throw error;
   }
 };
@@ -143,6 +174,25 @@ export const signOut = async (): Promise<void> => {
   }
 };
 
+// Log in with Google
+export const signInWithGoogle = async (): Promise<void> => {
+  try {
+    console.log('Starting Google login redirect flow...');
+    // For Google login with Azure AD B2C, we need to use the idp parameter
+    // Note: This depends on how your Azure B2C tenant is configured for Google
+    await msalInstance.loginRedirect({
+      scopes: apiConfig.scopes,
+      redirectUri: window.location.origin + '/auth',
+      extraQueryParameters: {
+        idp: 'google.com' // This is the key for Azure B2C to redirect to Google
+      }
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    throw error;
+  }
+};
+
 // Initialize MSAL
 export const initializeAuth = (): void => {
   console.log('Initializing MSAL...');
@@ -151,6 +201,25 @@ export const initializeAuth = (): void => {
     msalInstance.handleRedirectPromise()
       .then(response => {
         console.log('Redirect handled, response:', response ? 'Auth successful' : 'No response');
+        
+        // Check if we're stuck in a redirect loop
+        const currentPath = window.location.pathname;
+        const hasAuthParameter = window.location.search.includes('code=') || 
+                                 window.location.search.includes('error=');
+        
+        // If we're on the auth page and there's no auth parameters, and we're authenticated,
+        // attempt to redirect to the stored path or home
+        if (currentPath === '/auth' && !hasAuthParameter && getActiveAccount()) {
+          const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+          if (redirectPath) {
+            console.log("Auto-redirecting to stored path:", redirectPath);
+            window.location.replace(redirectPath);
+            sessionStorage.removeItem('redirectAfterAuth');
+          } else {
+            console.log("No stored path found, redirecting to home");
+            window.location.replace('/');
+          }
+        }
       })
       .catch(error => {
         console.error('Error handling redirect:', error);
@@ -163,23 +232,4 @@ export const initializeAuth = (): void => {
 // Get current authentication status
 export const getAuthStatus = (): boolean => {
   return msalInstance.getAllAccounts().length > 0;
-};
-
-// Log in with Google
-export const signInWithGoogle = async (): Promise<void> => {
-  try {
-    console.log('Starting Google login redirect flow...');
-    // For Google login with Azure AD B2C, we need to use the idp parameter
-    // Note: This depends on how your Azure B2C tenant is configured for Google
-    await msalInstance.loginRedirect({
-      scopes: apiConfig.scopes,
-      redirectUri: window.location.origin,
-      extraQueryParameters: {
-        idp: 'google.com' // This is the key for Azure B2C to redirect to Google
-      }
-    });
-  } catch (error) {
-    console.error('Google login error:', error);
-    throw error;
-  }
 };

@@ -1,6 +1,6 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { initializeAuth } from '@/integrations/azure/client';
@@ -24,6 +24,11 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/api-test" element={<ApiTest />} />
+            
+            {/* Add a catch-all route that redirects to the auth handler for auth callbacks */}
+            <Route path="/auth/*" element={<Navigate to="/auth" replace />} />
+            
+            {/* 404 route must be last */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
