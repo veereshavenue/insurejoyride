@@ -49,6 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             // Redirect to the stored path after successful authentication
             const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+            console.log("Redirect path from sessionStorage:", redirectPath);
+            
             if (redirectPath) {
               sessionStorage.removeItem('redirectAfterAuth');
               navigate(redirectPath);
@@ -86,8 +88,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async () => {
     try {
       // Store current path before redirect
-      const currentPath = location.pathname;
-      sessionStorage.setItem('redirectAfterAuth', currentPath);
+      if (location.pathname !== '/auth') {
+        const currentPath = location.pathname + location.search;
+        console.log("Storing current path before auth:", currentPath);
+        sessionStorage.setItem('redirectAfterAuth', currentPath);
+      }
       
       await signIn();
     } catch (error) {
@@ -99,8 +104,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       // Store current path before redirect
-      const currentPath = location.pathname;
-      sessionStorage.setItem('redirectAfterAuth', currentPath);
+      if (location.pathname !== '/auth') {
+        const currentPath = location.pathname + location.search;
+        console.log("Storing current path before Google auth:", currentPath);
+        sessionStorage.setItem('redirectAfterAuth', currentPath);
+      }
       
       await signInWithGoogle();
     } catch (error) {

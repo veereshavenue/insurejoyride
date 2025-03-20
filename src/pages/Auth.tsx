@@ -16,6 +16,8 @@ const Auth = () => {
     if (isAuthenticated) {
       // Check if there's a stored redirect path
       const redirectPath = sessionStorage.getItem('redirectAfterAuth');
+      console.log("Auth page detected auth, redirect path:", redirectPath);
+      
       if (redirectPath) {
         sessionStorage.removeItem('redirectAfterAuth');
         navigate(redirectPath);
@@ -27,11 +29,20 @@ const Auth = () => {
 
   const handleLogin = async () => {
     try {
-      // Store the current path or referrer if it's not already set
+      // If no redirect is set yet, store the referrer or a default
       if (!sessionStorage.getItem('redirectAfterAuth')) {
-        // Use state from location if coming from a redirect, otherwise use pathname
-        const redirectPath = location.state?.from || '/';
-        sessionStorage.setItem('redirectAfterAuth', redirectPath);
+        // Check if we came from another page via state
+        const referrer = location.state?.from;
+        
+        // If we have a referrer that's not /auth, use it
+        if (referrer && referrer !== '/auth') {
+          console.log("Setting redirect from referrer:", referrer);
+          sessionStorage.setItem('redirectAfterAuth', referrer);
+        } else {
+          // Default to home if no meaningful referrer
+          console.log("No specific redirect path, setting to home");
+          sessionStorage.setItem('redirectAfterAuth', '/');
+        }
       }
       
       await login();
@@ -46,11 +57,17 @@ const Auth = () => {
 
   const handleGoogleLogin = async () => {
     try {
-      // Store the current path or referrer if it's not already set
+      // Similar logic for Google login
       if (!sessionStorage.getItem('redirectAfterAuth')) {
-        // Use state from location if coming from a redirect, otherwise use pathname
-        const redirectPath = location.state?.from || '/';
-        sessionStorage.setItem('redirectAfterAuth', redirectPath);
+        const referrer = location.state?.from;
+        
+        if (referrer && referrer !== '/auth') {
+          console.log("Setting Google redirect from referrer:", referrer);
+          sessionStorage.setItem('redirectAfterAuth', referrer);
+        } else {
+          console.log("No specific Google redirect path, setting to home");
+          sessionStorage.setItem('redirectAfterAuth', '/');
+        }
       }
       
       await loginWithGoogle();
