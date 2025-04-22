@@ -1,0 +1,66 @@
+{
+  "info": {
+    "name": "Insurance API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get All Quotes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/quotes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "quotes"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Quote by Provider",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/quotes/providerA",
+          "host": ["{{base_url}}"],
+          "path": ["api", "quotes", "providerA"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Select Quote",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/quotes/123/select",
+          "host": ["{{base_url}}"],
+          "path": ["api", "quotes", "123", "select"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/quotes/statistics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "quotes", "statistics"]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

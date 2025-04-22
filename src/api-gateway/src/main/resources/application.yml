@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: insurance-quote-service
+
+
+
+
+insurance:
+  providers:
+    providerA:
+      enabled: true
+      fetchFromDb: false
+      apiUrl: "https://api.providerA.com/quotes"
+      apiKey: "${PROVIDER_A_API_KEY}"
+    providerB:
+      enabled: true
+      fetchFromDb: false
+    providerC:
+      enabled: true
+      fetchFromDb: false
+
+
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
